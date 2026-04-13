@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -17,12 +17,10 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 8
 
     database_url: str = f"sqlite:///{(BASE_DIR / 'data' / 'tslurm_ops.db').as_posix()}"
-    cors_origins: list[str] = Field(
-        default_factory=lambda: [
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-        ]
-    )
+
+    # str로만 받고 property에서 파싱
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    terminal_targets: str = "master,node-a,node-b"
 
     initial_admin_username: str = "admin"
     initial_admin_password: str = "admin"
@@ -36,8 +34,6 @@ class Settings(BaseSettings):
     k8s_url: str | None = None
     snmp_url: str | None = None
 
-    terminal_targets: list[str] = Field(default_factory=lambda: ["master", "node-a", "node-b"])
-
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -45,23 +41,13 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, value: str | list[str]) -> list[str]:
-        if isinstance(value, list):
-            return value
-        if not value:
-            return []
-        return [item.strip() for item in value.split(",") if item.strip()]
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [item.strip() for item in self.cors_origins.split(",") if item.strip()]
 
-    @field_validator("terminal_targets", mode="before")
-    @classmethod
-    def parse_terminal_targets(cls, value: str | list[str]) -> list[str]:
-        if isinstance(value, list):
-            return value
-        if not value:
-            return []
-        return [item.strip() for item in value.split(",") if item.strip()]
+    @property
+    def terminal_targets_list(self) -> list[str]:
+        return [item.strip() for item in self.terminal_targets.split(",") if item.strip()]
 
 
 @lru_cache

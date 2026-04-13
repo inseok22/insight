@@ -28,6 +28,9 @@ def create_user(db: Session, payload: UserCreate) -> User:
         username=payload.username,
         password_hash=hash_password(payload.password),
         full_name=payload.full_name,
+        email=payload.email,
+        birth_date=payload.birth_date,
+        affiliation=payload.affiliation,
         role=payload.role,
         is_active=payload.is_active,
     )

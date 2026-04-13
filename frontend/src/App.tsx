@@ -11,6 +11,7 @@ import Terminal from "./pages/sub_pages/Terminal.tsx";
 import Settings from './pages/sub_pages/Settings';
 import K8s from './pages/sub_pages/k8s.tsx'; //쿠버네티 추가됨
 import Snmp from './pages/sub_pages/Snmp.tsx'; //snmp 추가
+import Register from "./pages/Register.tsx"; // Desk회원가입
 
 import NotFoundInDashboard from "./pages/error/NotFoundInDashboard.tsx";
 
@@ -19,6 +20,7 @@ export default function App() {
         <Routes>
             <Route path="/" element={<Navigate to="/login" replace/>}/>
             <Route path="/login" element={<Login/>}/>
+            <Route path="/register" element={<Register />} />
             <Route element={<PrivateRoute/>}>
                 <Route path="/ops" element={<Layout/>}>
                     <Route index element={<Navigate to="dashboard" replace/>}/>
