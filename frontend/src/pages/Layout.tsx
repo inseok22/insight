@@ -2,7 +2,7 @@ import {useMemo, useState, useEffect} from 'react';
 import {Layout, Menu, Breadcrumb, Button, theme, Avatar, Dropdown, Space, Typography, ConfigProvider} from 'antd';
 import type {MenuProps} from 'antd';
 import {
-    DashboardOutlined, CloudServerOutlined, DeploymentUnitOutlined, DatabaseOutlined, InteractionOutlined, UserOutlined, // SettingOutlined,
+    DashboardOutlined, CloudServerOutlined, DeploymentUnitOutlined, DatabaseOutlined, InteractionOutlined, UserOutlined, SettingOutlined,
     MenuFoldOutlined, MenuUnfoldOutlined, DownOutlined, LogoutOutlined, IdcardOutlined, CloudOutlined, ApiOutlined //clo는 쿠버네티스
 } from '@ant-design/icons';
 import {Outlet, useLocation, useNavigate} from 'react-router-dom';
@@ -35,7 +35,7 @@ export default function Admin() {
             // {
             //     key: 'terminal', label: '터미널', icon: <CodeOutlined/>, children: terminalChildren,
             // },
-            // {key: '/dashboard/settings', icon: <SettingOutlined/>, label: '설정'},
+            {key: '/ops/settings', icon: <SettingOutlined/>, label: '가입신청 관리'},
         ];
     }, []);
 
@@ -51,6 +51,7 @@ export default function Admin() {
         if (parts[1] === 'terminal' && parts[2]) return `/ops/terminal/${parts[2]}`;
         if (parts[1] === 'k8s') return '/ops/k8s';  // 쿠버네티스 추가
         if (parts[1] === 'snmp') return '/ops/snmp'; // snmp추가
+        if (parts[1] === 'settings') return '/ops/settings';
         if (parts[1]) return `/ops/${parts[1]}`;
         return '/ops/dashboard';
     }, [pathname]);
@@ -90,6 +91,7 @@ export default function Admin() {
         if (parts[1] && parts[1] == "power") items.push({title: 'Power'});
         if (parts[1] && parts[1] == "k8s") items.push({title: 'Kubernetes'});  // 쿠버네티스 추가
         if (parts[1] && parts[1] == "snmp") items.push({title: 'SNMP'}); //snmp 추가
+        if (parts[1] && parts[1] == "settings") items.push({title: '가입신청 관리'});
 
 
         if (parts[1] === 'terminal') {
