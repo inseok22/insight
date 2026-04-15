@@ -1,8 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.models.user import UserRole
+from app.models.user import ApprovalStatus, UserRole
 
 
 class UserCreate(BaseModel):
@@ -13,7 +13,8 @@ class UserCreate(BaseModel):
     birth_date: str | None = Field(default=None, max_length=20)
     affiliation: str | None = Field(default=None, max_length=100)
     role: UserRole = UserRole.USER
-    is_active: bool = True
+    is_active: bool = False
+    approval_status: ApprovalStatus = ApprovalStatus.PENDING
 
 
 class UserRead(BaseModel):
@@ -27,5 +28,23 @@ class UserRead(BaseModel):
     affiliation: str | None = None
     role: UserRole
     is_active: bool
+    approval_status: ApprovalStatus
     created_at: datetime
     updated_at: datetime
+
+
+class UserAdminRead(UserRead):
+    reviewed_at: datetime | None = None
+    reviewed_by: str | None = None
+    rejection_reason: str | None = None
+
+
+class UserApprovalPatch(BaseModel):
+    status: ApprovalStatus
+    rejection_reason: str | None = Field(default=None, max_length=255)
+
+    @model_validator(mode="after")
+    def validate_rejection_reason(self) -> "UserApprovalPatch":
+        if self.status == ApprovalStatus.APPROVED:
+            self.rejection_reason = None
+        return self

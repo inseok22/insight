@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.dependencies.auth import ActiveUserDep
-from app.models.user import UserRole
+from app.models.user import ApprovalStatus, UserRole
 from app.schemas.auth import AuthenticatedUserResponse, LoginRequest, RegisterRequest, TokenResponse
 from app.schemas.user import UserCreate, UserRead
 from app.services.auth_service import build_token_response
@@ -46,7 +46,8 @@ def register(payload: RegisterRequest, db: DbDep) -> UserRead:
         birth_date=payload.birth_date,
         affiliation=payload.affiliation,
         role=UserRole.USER,
-        is_active=False,  # 관리자 승인 후 활성화
+        is_active=False,  # 신청 레코드는 로그인 계정으로 활성화하지 않음
+        approval_status=ApprovalStatus.PENDING,
     )
     try:
         user = create_user(db, user_data)

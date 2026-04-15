@@ -63,12 +63,12 @@ export default function Register() {
 
             if (!response.ok) {
                 // 중복 아이디 등 에러 처리
-                messageApi.error(data.detail || '가입 중 오류가 발생했습니다.');
+                messageApi.error(data.detail || '가입신청 중 오류가 발생했습니다.');
                 return;
             }
 
-            // 가입 성공 → 팝업 → TSlurmDesk Dex 로그인 페이지로 이동
-            messageApi.success('가입이 완료되었습니다.');
+            // 가입신청 성공 → 팝업 → TSlurmDesk Dex 로그인 페이지로 이동
+            messageApi.success('가입 신청이 완료되었습니다. Desk 등록 대기 상태입니다.');
             setTimeout(() => {
                 // 외부 URL(TSlurmDesk)로 이동이므로 navigate 대신 location.href 사용
                 window.location.href = redirectUrl;
@@ -89,7 +89,7 @@ export default function Register() {
                     TSlurmOps
                 </Typography.Title>
                 <Typography.Text type="secondary" style={{ display: 'block', textAlign: 'center', marginBottom: 24 }}>
-                    회원가입
+                    가입신청
                 </Typography.Text>
 
                 <Form<RegisterFields>
