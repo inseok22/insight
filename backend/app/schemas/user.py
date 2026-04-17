@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.models.user import ApprovalStatus, UserRole
+from app.models.user import ApprovalStatus
 
 
 class UserCreate(BaseModel):
@@ -12,9 +12,6 @@ class UserCreate(BaseModel):
     email: str | None = Field(default=None, max_length=100)
     birth_date: str | None = Field(default=None, max_length=20)
     affiliation: str | None = Field(default=None, max_length=100)
-    role: UserRole = UserRole.USER
-    is_active: bool = False
-    approval_status: ApprovalStatus = ApprovalStatus.PENDING
 
 
 class UserRead(BaseModel):
@@ -26,7 +23,6 @@ class UserRead(BaseModel):
     email: str | None = None
     birth_date: str | None = None
     affiliation: str | None = None
-    role: UserRole
     is_active: bool
     approval_status: ApprovalStatus
     created_at: datetime

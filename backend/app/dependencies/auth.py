@@ -6,19 +6,19 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.security import credentials_exception, decode_access_token, TokenError
-from app.db.session import get_db
-from app.models.user import User, UserRole
-from app.services.user_service import get_user_by_username
+from app.db.session import get_admin_db
+from app.models.admin import Admin
+from app.services.admin_service import get_admin_by_username
 
 settings = get_settings()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.api_v1_prefix}/auth/token")
 
 
 TokenDep = Annotated[str, Depends(oauth2_scheme)]
-DbDep = Annotated[Session, Depends(get_db)]
+AdminDbDep = Annotated[Session, Depends(get_admin_db)]
 
 
-def get_current_user(token: TokenDep, db: DbDep) -> User:
+def get_current_admin(token: TokenDep, db: AdminDbDep) -> Admin:
     try:
         payload = decode_access_token(token)
     except TokenError as exc:
@@ -28,28 +28,26 @@ def get_current_user(token: TokenDep, db: DbDep) -> User:
     if not username:
         raise credentials_exception
 
-    user = get_user_by_username(db, username)
-    if not user:
+    admin = get_admin_by_username(db, username)
+    if not admin:
         raise credentials_exception
-    return user
+    return admin
 
 
-CurrentUserDep = Annotated[User, Depends(get_current_user)]
+CurrentAdminDep = Annotated[Admin, Depends(get_current_admin)]
 
 
-def get_current_active_user(current_user: CurrentUserDep) -> User:
-    if not current_user.is_active:
+def get_current_active_admin(current_admin: CurrentAdminDep) -> Admin:
+    if not current_admin.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="비활성 사용자입니다.")
-    return current_user
+    return current_admin
 
 
-ActiveUserDep = Annotated[User, Depends(get_current_active_user)]
+ActiveAdminDep = Annotated[Admin, Depends(get_current_active_admin)]
 
 
-def get_current_admin_user(current_user: ActiveUserDep) -> User:
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="관리자 권한이 필요합니다.")
-    return current_user
+def get_current_admin_user(current_admin: ActiveAdminDep) -> Admin:
+    return current_admin
 
 
-AdminUserDep = Annotated[User, Depends(get_current_admin_user)]
+AdminUserDep = Annotated[Admin, Depends(get_current_admin_user)]

@@ -4,40 +4,41 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
-from app.dependencies.auth import ActiveUserDep
-from app.models.user import ApprovalStatus, UserRole
+from app.db.session import get_admin_db, get_user_db
+from app.dependencies.auth import ActiveAdminDep
 from app.schemas.auth import AuthenticatedUserResponse, LoginRequest, RegisterRequest, TokenResponse
 from app.schemas.user import UserCreate, UserRead
 from app.services.auth_service import build_token_response
-from app.services.user_service import authenticate_user, create_user
+from app.services.admin_service import authenticate_admin
+from app.services.user_service import create_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-DbDep = Annotated[Session, Depends(get_db)]
+AdminDbDep = Annotated[Session, Depends(get_admin_db)]
+UserDbDep = Annotated[Session, Depends(get_user_db)]
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, db: DbDep) -> TokenResponse:
-    user = authenticate_user(db, payload.username, payload.password)
-    if not user:
+def login(payload: LoginRequest, db: AdminDbDep) -> TokenResponse:
+    admin = authenticate_admin(db, payload.username, payload.password)
+    if not admin:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="아이디 또는 비밀번호가 올바르지 않습니다.")
-    if not user.is_active:
+    if not admin.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="비활성 사용자입니다.")
-    return build_token_response(user)
+    return build_token_response(admin)
 
 
 @router.post("/token", response_model=TokenResponse)
-def issue_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: DbDep) -> TokenResponse:
-    user = authenticate_user(db, form_data.username, form_data.password)
-    if not user:
+def issue_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: AdminDbDep) -> TokenResponse:
+    admin = authenticate_admin(db, form_data.username, form_data.password)
+    if not admin:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="아이디 또는 비밀번호가 올바르지 않습니다.", headers={"WWW-Authenticate": "Bearer"})
-    if not user.is_active:
+    if not admin.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="비활성 사용자입니다.")
-    return build_token_response(user)
+    return build_token_response(admin)
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def register(payload: RegisterRequest, db: DbDep) -> UserRead:
+def register(payload: RegisterRequest, db: UserDbDep) -> UserRead:
     user_data = UserCreate(
         username=payload.username,
         password=payload.password,
@@ -45,9 +46,6 @@ def register(payload: RegisterRequest, db: DbDep) -> UserRead:
         email=payload.email,
         birth_date=payload.birth_date,
         affiliation=payload.affiliation,
-        role=UserRole.USER,
-        is_active=False,  # 신청 레코드는 로그인 계정으로 활성화하지 않음
-        approval_status=ApprovalStatus.PENDING,
     )
     try:
         user = create_user(db, user_data)
@@ -57,5 +55,5 @@ def register(payload: RegisterRequest, db: DbDep) -> UserRead:
 
 
 @router.get("/me", response_model=AuthenticatedUserResponse)
-def read_me(current_user: ActiveUserDep) -> AuthenticatedUserResponse:
-    return AuthenticatedUserResponse(user=current_user)
+def read_me(current_admin: ActiveAdminDep) -> AuthenticatedUserResponse:
+    return AuthenticatedUserResponse(user=current_admin)

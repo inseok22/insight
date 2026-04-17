@@ -39,6 +39,12 @@ function formatDate(date?: string | null) {
   return d.toLocaleString();
 }
 
+function renderStatusTag(status?: ApprovalStatus) {
+  if (status === 'approved') return <Tag color="green">승인완료</Tag>;
+  if (status === 'rejected') return <Tag color="red">거절</Tag>;
+  return <Tag color="gold">대기</Tag>;
+}
+
 export default function Settings() {
   const [messageApi, contextHolder] = message.useMessage();
   const [searchText, setSearchText] = useState('');
@@ -138,14 +144,23 @@ export default function Settings() {
         return;
       }
 
-      messageApi.success(data.message || '처리되었습니다.');
-      if (status === 'rejected') {
-        closeModal();
+      if (status === 'approved') {
+        setDetail((prev) => (
+          prev && prev.id === selectedRecord.id
+            ? {
+                ...prev,
+                approval_status: 'approved',
+                is_active: false,
+              }
+            : prev
+        ));
+        messageApi.success('승인 완료되었습니다. 현재 화면은 대기 목록만 표시하므로 목록에서 제외됩니다.');
+      } else {
+        messageApi.success('거절되어 신청 레코드가 삭제되었습니다.');
       }
+
       await loadList({ approval_status: 'pending', q: searchText });
-      if (status === 'approved' && selectedRecord.id) {
-        await loadDetail(selectedRecord.id);
-      }
+      closeModal();
     } catch (error) {
       console.error(error);
       messageApi.error('처리 중 오류가 발생했습니다.');
@@ -186,11 +201,7 @@ export default function Settings() {
       dataIndex: 'approval_status',
       key: 'approval_status',
       width: 130,
-      render: (value: ApprovalStatus) => {
-        if (value === 'approved') return <Tag color="green">승인완료</Tag>;
-        if (value === 'rejected') return <Tag color="red">거절</Tag>;
-        return <Tag color="gold">대기</Tag>;
-      },
+      render: (value: ApprovalStatus) => renderStatusTag(value),
     },
   ];
 
@@ -207,6 +218,9 @@ export default function Settings() {
           </Typography.Text>
         </div>
         <Space>
+          <Typography.Text type="secondary" style={{ whiteSpace: 'nowrap' }}>
+            현재 화면은 대기 신청만 표시합니다.
+          </Typography.Text>
           <Input.Search
             placeholder="이름 또는 아이디 검색"
             allowClear
@@ -250,16 +264,7 @@ export default function Settings() {
             danger
             loading={rejectLoading}
             onClick={() => {
-              Modal.confirm({
-                title: '이 신청을 거절하시겠습니까?',
-                content: '거절 시 신청 레코드는 삭제되며 목록에서 즉시 사라집니다.',
-                okText: '거절',
-                okButtonProps: { danger: true },
-                cancelText: '취소',
-                onOk: async () => {
-                  await handleApproval('rejected');
-                },
-              });
+              void handleApproval('rejected');
             }}
           >
             거절
@@ -269,15 +274,7 @@ export default function Settings() {
             type="primary"
             loading={approveLoading}
             onClick={() => {
-              Modal.confirm({
-                title: 'Desk/OpenLDAP 수동 등록을 완료하셨나요?',
-                content: '수동 등록이 완료된 경우에만 승인 처리하세요.',
-                okText: '승인',
-                cancelText: '취소',
-                onOk: async () => {
-                  await handleApproval('approved');
-                },
-              });
+              void handleApproval('approved');
             }}
           >
             승인
@@ -295,11 +292,7 @@ export default function Settings() {
           <Descriptions.Item label="생년월일">{selectedRecord?.birth_date || '-'}</Descriptions.Item>
           <Descriptions.Item label="소속">{selectedRecord?.affiliation || '-'}</Descriptions.Item>
           <Descriptions.Item label="상태">
-            {selectedRecord?.approval_status === 'approved' ? (
-              <Tag color="green">승인완료</Tag>
-            ) : (
-              <Tag color="gold">대기</Tag>
-            )}
+            {renderStatusTag(selectedRecord?.approval_status)}
           </Descriptions.Item>
         </Descriptions>
       </Modal>

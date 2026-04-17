@@ -1,5 +1,9 @@
 from sqlalchemy.orm import DeclarativeBase
 
 
-class Base(DeclarativeBase):
+class AdminBase(DeclarativeBase):
+    pass
+
+
+class UserBase(DeclarativeBase):
     pass

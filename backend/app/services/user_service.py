@@ -3,12 +3,9 @@ from datetime import datetime, timezone
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.core.config import get_settings
-from app.core.security import hash_password, verify_password
-from app.models.user import ApprovalStatus, User, UserRole
+from app.core.security import hash_password
+from app.models.user import ApprovalStatus, User
 from app.schemas.user import UserCreate
-
-settings = get_settings()
 
 
 def get_user_by_username(db: Session, username: str) -> User | None:
@@ -57,39 +54,13 @@ def create_user(db: Session, payload: UserCreate) -> User:
         email=payload.email,
         birth_date=payload.birth_date,
         affiliation=payload.affiliation,
-        role=payload.role,
-        is_active=payload.is_active,
-        approval_status=payload.approval_status,
+        is_active=False,
+        approval_status=ApprovalStatus.PENDING,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
     return user
-
-
-def authenticate_user(db: Session, username: str, password: str) -> User | None:
-    user = get_user_by_username(db, username)
-    if not user:
-        return None
-    if not verify_password(password, user.password_hash):
-        return None
-    return user
-
-
-def ensure_initial_admin(db: Session) -> None:
-    existing = get_user_by_username(db, settings.initial_admin_username)
-    if existing:
-        return
-
-    admin = User(
-        username=settings.initial_admin_username,
-        password_hash=hash_password(settings.initial_admin_password),
-        full_name=settings.initial_admin_name,
-        role=UserRole.ADMIN,
-        is_active=True,
-    )
-    db.add(admin)
-    db.commit()
 
 
 def approve_user(db: Session, *, user_id: int, reviewed_by: str) -> User:

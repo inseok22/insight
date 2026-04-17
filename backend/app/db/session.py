@@ -8,18 +8,32 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
-if settings.database_url.startswith("sqlite:///"):
-    db_file = settings.database_url.replace("sqlite:///", "", 1)
-    Path(db_file).parent.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(settings.database_url, connect_args={"check_same_thread": False})
-else:
-    engine = create_engine(settings.database_url)
 
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, class_=Session)
+def _create_engine(database_url: str):
+    if database_url.startswith("sqlite:///"):
+        db_file = database_url.replace("sqlite:///", "", 1)
+        Path(db_file).parent.mkdir(parents=True, exist_ok=True)
+        return create_engine(database_url, connect_args={"check_same_thread": False})
+    return create_engine(database_url)
 
 
-def get_db() -> Generator[Session, None, None]:
-    db = SessionLocal()
+admin_engine = _create_engine(settings.admin_database_url)
+user_engine = _create_engine(settings.user_database_url)
+
+AdminSessionLocal = sessionmaker(bind=admin_engine, autoflush=False, autocommit=False, class_=Session)
+UserSessionLocal = sessionmaker(bind=user_engine, autoflush=False, autocommit=False, class_=Session)
+
+
+def get_admin_db() -> Generator[Session, None, None]:
+    db = AdminSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_user_db() -> Generator[Session, None, None]:
+    db = UserSessionLocal()
     try:
         yield db
     finally:
