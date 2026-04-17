@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.user import UserRead
+from app.schemas.admin import AdminRead
 
 
 class LoginRequest(BaseModel):
@@ -21,7 +21,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in: int
-    user: UserRead
+    user: AdminRead
 
 
 class MessageResponse(BaseModel):
@@ -31,4 +31,4 @@ class MessageResponse(BaseModel):
 class AuthenticatedUserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    user: UserRead
+    user: AdminRead

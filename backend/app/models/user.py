@@ -4,12 +4,7 @@ from enum import Enum
 from sqlalchemy import Boolean, DateTime, Enum as SqlEnum, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base
-
-
-class UserRole(str, Enum):
-    ADMIN = "admin"
-    USER = "user"
+from app.db.base import UserBase
 
 
 class ApprovalStatus(str, Enum):
@@ -18,7 +13,7 @@ class ApprovalStatus(str, Enum):
     REJECTED = "rejected"
 
 
-class User(Base):
+class User(UserBase):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -28,8 +23,7 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(100), nullable=True)        # 추가
     birth_date: Mapped[str | None] = mapped_column(String(20), nullable=True)    # 추가 (예: "1990-01-15")
     affiliation: Mapped[str | None] = mapped_column(String(100), nullable=True)  # 추가 (소속)
-    role: Mapped[UserRole] = mapped_column(SqlEnum(UserRole), default=UserRole.USER, nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     approval_status: Mapped[ApprovalStatus] = mapped_column(
         SqlEnum(ApprovalStatus),
         default=ApprovalStatus.PENDING,

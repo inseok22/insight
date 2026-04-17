@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.core.config import get_settings
-from app.dependencies.auth import ActiveUserDep
+from app.dependencies.auth import ActiveAdminDep
 from app.schemas.config import DashboardUrlsResponse, FrontendConfigResponse, TerminalTargetResponse
 
 router = APIRouter(prefix="/config", tags=["config"])
@@ -9,7 +9,7 @@ settings = get_settings()
 
 
 @router.get("/frontend", response_model=FrontendConfigResponse)
-def read_frontend_config(_: ActiveUserDep) -> FrontendConfigResponse:
+def read_frontend_config(_: ActiveAdminDep) -> FrontendConfigResponse:
     dashboards = DashboardUrlsResponse(
         overview_url=settings.overview_url,
         node_url=settings.node_url,

@@ -16,7 +16,8 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 8
 
-    database_url: str = f"sqlite:///{(BASE_DIR / 'data' / 'tslurm_ops.db').as_posix()}"
+    admin_database_url: str = f"sqlite:///{(BASE_DIR / 'data' / 'insight_admin.db').as_posix()}"
+    user_database_url: str = f"sqlite:///{(BASE_DIR / 'data' / 'desk_users.db').as_posix()}"
 
     # str로만 받고 property에서 파싱
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
