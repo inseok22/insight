@@ -25,7 +25,12 @@ class User(UserBase):
     affiliation: Mapped[str | None] = mapped_column(String(100), nullable=True)  # 추가 (소속)
     is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     approval_status: Mapped[ApprovalStatus] = mapped_column(
-        SqlEnum(ApprovalStatus),
+        SqlEnum(
+            ApprovalStatus,
+            name="approval_status_enum",
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+            validate_strings=True,
+        ),
         default=ApprovalStatus.PENDING,
         nullable=False,
     )
