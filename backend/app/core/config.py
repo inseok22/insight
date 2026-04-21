@@ -1,10 +1,11 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parents[2]
+ENV_FILE = BASE_DIR / ".env"
 
 
 class Settings(BaseSettings):
@@ -16,8 +17,14 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 8
 
-    admin_database_url: str = f"sqlite:///{(BASE_DIR / 'data' / 'insight_admin.db').as_posix()}"
-    user_database_url: str = f"sqlite:///{(BASE_DIR / 'data' / 'desk_users.db').as_posix()}"
+    admin_database_url: str = Field(
+        default="mysql+pymysql://insight_admin_user:change-me@127.0.0.1:3306/insight_admin?charset=utf8mb4",
+        validation_alias="ADMIN_DATABASE_URL",
+    )
+    user_database_url: str = Field(
+        default="mysql+pymysql://desk_user_user:change-me@127.0.0.1:3306/desk_users?charset=utf8mb4",
+        validation_alias="USER_DATABASE_URL",
+    )
 
     # str로만 받고 property에서 파싱
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
@@ -36,11 +43,22 @@ class Settings(BaseSettings):
     snmp_url: str | None = None
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=ENV_FILE,
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
     )
+
+    @field_validator("debug", mode="before")
+    @classmethod
+    def parse_debug_flag(cls, value: bool | str) -> bool | str:
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"debug", "development", "dev"}:
+                return True
+            if normalized in {"release", "production", "prod"}:
+                return False
+        return value
 
     @property
     def cors_origins_list(self) -> list[str]:

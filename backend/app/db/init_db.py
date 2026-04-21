@@ -7,6 +7,7 @@ from app.services.admin_service import ensure_initial_admin
 
 
 def init_db() -> None:
+    # admin/user metadata는 각각 분리된 database(schema)에 생성된다.
     AdminBase.metadata.create_all(bind=admin_engine)
     UserBase.metadata.create_all(bind=user_engine)
     with AdminSessionLocal() as db:  # type: Session
