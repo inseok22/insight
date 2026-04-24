@@ -1,18 +1,58 @@
-import {useMemo, useState, useEffect} from 'react';
-import {Layout, Menu, Breadcrumb, Button, theme, Avatar, Dropdown, Space, Typography, ConfigProvider} from 'antd';
+import {useCallback, useMemo, useState, useEffect} from 'react';
+import {Layout, Menu, Breadcrumb, Button, theme, Avatar, Dropdown, Space, Typography, ConfigProvider, Badge, Empty, Popover, Spin} from 'antd';
 import type {MenuProps} from 'antd';
 import {
     DashboardOutlined, CloudServerOutlined, DeploymentUnitOutlined, DatabaseOutlined, InteractionOutlined, UserOutlined, SettingOutlined,
-    MenuFoldOutlined, MenuUnfoldOutlined, DownOutlined, LogoutOutlined, IdcardOutlined, CloudOutlined, ApiOutlined //clo는 쿠버네티스
+    MenuFoldOutlined, MenuUnfoldOutlined, DownOutlined, LogoutOutlined, IdcardOutlined, CloudOutlined, ApiOutlined, BellOutlined //clo는 쿠버네티스
 } from '@ant-design/icons';
 import {Outlet, useLocation, useNavigate} from 'react-router-dom';
 import {TERMINALS} from '../config/terminals';
 
 const {Header, Sider, Content} = Layout;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const NOTIFICATION_LIMIT = 5;
+const NOTIFICATION_POLL_INTERVAL_MS = 30_000;
+
+type PendingUserNotification = {
+    id: number;
+    username: string;
+    full_name?: string | null;
+    created_at: string;
+};
+
+function getAuthHeader(): Record<string, string> {
+    const token = localStorage.getItem('token');
+    return token ? {Authorization: `Bearer ${token}`} : {};
+}
+
+function getApplicantName(user: PendingUserNotification) {
+    return user.full_name?.trim() || user.username;
+}
+
+function formatNotificationShortDate(date: string) {
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return '-';
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${month}.${day}`;
+}
+
+function formatNotificationLongDate(date: string) {
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return date;
+    return new Intl.DateTimeFormat('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    }).format(parsed);
+}
 
 export default function Admin() {
     const [collapsed, setCollapsed] = useState(false);
     const [openKeys, setOpenKeys] = useState<string[]>([]);
+    const [notificationOpen, setNotificationOpen] = useState(false);
+    const [notificationLoading, setNotificationLoading] = useState(false);
+    const [pendingNotifications, setPendingNotifications] = useState<PendingUserNotification[]>([]);
     const {token} = theme.useToken();
     const navigate = useNavigate();
     const {pathname} = useLocation();
@@ -35,7 +75,6 @@ export default function Admin() {
             // {
             //     key: 'terminal', label: '터미널', icon: <CodeOutlined/>, children: terminalChildren,
             // },
-            {key: '/ops/settings', icon: <SettingOutlined/>, label: '가입신청 관리'},
         ];
     }, []);
 
@@ -62,6 +101,51 @@ export default function Admin() {
         if (pathname.startsWith('/ops/terminal')) setOpenKeys(['terminal']);
         else setOpenKeys([]);
     }, [pathname, collapsed]);
+
+    const loadPendingNotifications = useCallback(async (silent = false) => {
+        if (!silent) setNotificationLoading(true);
+        try {
+            const qs = new URLSearchParams({approval_status: 'pending'});
+            const response = await fetch(`${API_BASE_URL}/api/v1/users?${qs.toString()}`, {
+                headers: {
+                    ...getAuthHeader(),
+                },
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+            const nextItems = (Array.isArray(data) ? data : [])
+                .filter((item): item is PendingUserNotification => (
+                    item
+                    && typeof item.id === 'number'
+                    && typeof item.username === 'string'
+                    && typeof item.created_at === 'string'
+                ))
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                .slice(0, NOTIFICATION_LIMIT);
+
+            setPendingNotifications(nextItems);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            if (!silent) setNotificationLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        void loadPendingNotifications();
+
+        const intervalId = window.setInterval(() => {
+            void loadPendingNotifications(true);
+        }, NOTIFICATION_POLL_INTERVAL_MS);
+
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, [loadPendingNotifications]);
 
     const onMenuClick: MenuProps['onClick'] = (e) => {
         if (e.keyPath.includes('terminal')) {
@@ -105,18 +189,74 @@ export default function Admin() {
     }, [pathname]);
 
     const userName = localStorage.getItem('userName') || 'Admin';
+    const hasPendingNotifications = pendingNotifications.length > 0;
 
     const userMenuItems: MenuProps['items'] = [
         {key: 'profile', icon: <IdcardOutlined/>, label: '내 정보', disabled: true},
-        {type: 'divider'},
+        {key: 'settings', icon: <SettingOutlined/>, label: '가입신청 관리'},
         {key: 'logout', icon: <LogoutOutlined/>, label: '로그아웃', danger: true},
     ];
     const onUserMenuClick: MenuProps['onClick'] = ({key}) => {
+        if (key === 'settings') {
+            navigate('/ops/settings');
+            return;
+        }
         if (key === 'logout') {
             localStorage.removeItem('token');
             navigate('/login', {replace: true});
         }
     };
+
+    const handleNotificationClick = () => {
+        setNotificationOpen(false);
+        navigate('/ops/settings');
+    };
+
+    const notificationContent = (
+        <div style={{width: 320}}>
+            <div style={{paddingBottom: 8}}>
+                <Typography.Text strong>가입신청 알림</Typography.Text>
+            </div>
+
+            {notificationLoading ? (
+                <div style={{display: 'flex', justifyContent: 'center', padding: '28px 0'}}>
+                    <Spin size="small"/>
+                </div>
+            ) : hasPendingNotifications ? (
+                <div style={{maxHeight: 360, overflowY: 'auto'}}>
+                    {pendingNotifications.map((item, index) => (
+                        <button
+                            key={item.id}
+                            type="button"
+                            onClick={handleNotificationClick}
+                            style={{
+                                width: '100%',
+                                textAlign: 'left',
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                padding: '12px 0',
+                                borderTop: index === 0 ? 'none' : `1px solid ${token.colorBorderSecondary}`,
+                            }}
+                        >
+                            <Typography.Text strong style={{display: 'block', marginBottom: 4}}>
+                                {`가입신청 | ${formatNotificationShortDate(item.created_at)}`}
+                            </Typography.Text>
+                            <Typography.Text type="secondary" style={{display: 'block', lineHeight: 1.5}}>
+                                {`${getApplicantName(item)}이 ${formatNotificationLongDate(item.created_at)}에 가입신청을 하였습니다.`}
+                            </Typography.Text>
+                        </button>
+                    ))}
+                </div>
+            ) : (
+                <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="새로운 가입신청이 없습니다."
+                    styles={{image: {height: 48}}}
+                />
+            )}
+        </div>
+    );
 
     return (
         <Layout style={{minHeight: '100vh'}}>
@@ -197,17 +337,37 @@ export default function Admin() {
                     <Breadcrumb items={breadcrumbItems}/>
 
                     <div style={{marginLeft: 'auto'}}>
-                        <Dropdown trigger={['click']} placement="bottomRight"
-                                  menu={{items: userMenuItems, onClick: onUserMenuClick}}>
-                            <Button type="text" aria-label="사용자 메뉴 열기"
-                                    style={{display: 'flex', alignItems: 'center', paddingInline: 8}}>
-                                <Space size={8}>
-                                    <Avatar size={28} icon={<UserOutlined/>}/>
-                                    <Typography.Text style={{color: token.colorText}}>{userName}</Typography.Text>
-                                    <DownOutlined style={{fontSize: 12, color: token.colorTextSecondary}}/>
-                                </Space>
-                            </Button>
-                        </Dropdown>
+                        <Space size={4}>
+                            <Popover
+                                trigger="click"
+                                placement="bottomRight"
+                                content={notificationContent}
+                                open={notificationOpen}
+                                onOpenChange={setNotificationOpen}
+                            >
+                                <Badge dot={hasPendingNotifications} offset={[-2, 2]}>
+                                    <Button
+                                        type="text"
+                                        aria-label="가입신청 알림 열기"
+                                        style={{display: 'flex', alignItems: 'center', justifyContent: 'center'}}
+                                    >
+                                        <BellOutlined style={{fontSize: 18, color: token.colorText}}/>
+                                    </Button>
+                                </Badge>
+                            </Popover>
+
+                            <Dropdown trigger={['click']} placement="bottomRight"
+                                      menu={{items: userMenuItems, onClick: onUserMenuClick}}>
+                                <Button type="text" aria-label="사용자 메뉴 열기"
+                                        style={{display: 'flex', alignItems: 'center', paddingInline: 8}}>
+                                    <Space size={8}>
+                                        <Avatar size={28} icon={<UserOutlined/>}/>
+                                        <Typography.Text style={{color: token.colorText}}>{userName}</Typography.Text>
+                                        <DownOutlined style={{fontSize: 12, color: token.colorTextSecondary}}/>
+                                    </Space>
+                                </Button>
+                            </Dropdown>
+                        </Space>
                     </div>
                 </Header>
 
