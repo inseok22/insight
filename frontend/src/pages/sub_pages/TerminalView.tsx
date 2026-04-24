@@ -96,8 +96,9 @@ export default function TerminalView({wsUrl}: Props) {
         };
 
         const disposeData = term.onData((data) => {
-            ws.readyState === WebSocket.OPEN &&
-            ws.send(JSON.stringify({type: 'data', data}));
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({type: 'data', data}));
+            }
         });
 
         const ro = new ResizeObserver(() => fit.fit());
@@ -107,18 +108,22 @@ export default function TerminalView({wsUrl}: Props) {
             try {
                 disposeData.dispose();
             } catch {
+                // cleanup no-op
             }
             try {
                 ro.disconnect();
             } catch {
+                // cleanup no-op
             }
             try {
                 ws.close();
             } catch {
+                // cleanup no-op
             }
             try {
                 term.dispose();
             } catch {
+                // cleanup no-op
             }
         };
     }, [wsUrl]);
