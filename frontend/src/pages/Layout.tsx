@@ -303,7 +303,7 @@ export default function Admin() {
                             textOverflow: 'ellipsis',
                         }}
                     >
-                        {collapsed ? 'TSlurm' : 'TSlurmOps'}
+                        {collapsed ? 'TSlurm' : 'TSlurm Insight'}
                     </div>
 
                     {/* 메뉴 */}
