@@ -86,7 +86,7 @@ export default function Register() {
             {contextHolder}
             <div className="auth-card">
                 <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 8, color: 'rgb(18, 25, 35)' }}>
-                    TSlurmOps
+                    TSlurmDesk
                 </Typography.Title>
                 <Typography.Text type="secondary" style={{ display: 'block', textAlign: 'center', marginBottom: 24 }}>
                     가입신청

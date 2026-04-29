@@ -74,7 +74,7 @@ export default function Login() {
         {contextHolder}
         <div className="auth-card">
           <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 8, color: 'rgb(18, 25, 35)' }}>
-            TSlurmOps
+            TSlurm Insight
           </Typography.Title>
 
           <Form<LoginFields>
