@@ -3,10 +3,11 @@ import {Layout, Menu, Breadcrumb, Button, theme, Avatar, Dropdown, Space, Typogr
 import type {MenuProps} from 'antd';
 import {
     DashboardOutlined, CloudServerOutlined, DeploymentUnitOutlined, DatabaseOutlined, InteractionOutlined, UserOutlined, SettingOutlined,
-    MenuFoldOutlined, MenuUnfoldOutlined, DownOutlined, LogoutOutlined, IdcardOutlined, CloudOutlined, ApiOutlined, BellOutlined //clo는 쿠버네티스
+    MenuFoldOutlined, MenuUnfoldOutlined, DownOutlined, LogoutOutlined, IdcardOutlined, CloudOutlined, ApiOutlined, BellOutlined, CalendarOutlined //clo는 쿠버네티스
 } from '@ant-design/icons';
 import {Outlet, useLocation, useNavigate} from 'react-router-dom';
 import {TERMINALS} from '../config/terminals';
+import {formatKstDate, formatKstShortDate} from '../utils/time';
 
 const {Header, Sider, Content} = Layout;
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -27,24 +28,6 @@ function getAuthHeader(): Record<string, string> {
 
 function getApplicantName(user: PendingUserNotification) {
     return user.full_name?.trim() || user.username;
-}
-
-function formatNotificationShortDate(date: string) {
-    const parsed = new Date(date);
-    if (Number.isNaN(parsed.getTime())) return '-';
-    const month = String(parsed.getMonth() + 1).padStart(2, '0');
-    const day = String(parsed.getDate()).padStart(2, '0');
-    return `${month}.${day}`;
-}
-
-function formatNotificationLongDate(date: string) {
-    const parsed = new Date(date);
-    if (Number.isNaN(parsed.getTime())) return date;
-    return new Intl.DateTimeFormat('ko-KR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-    }).format(parsed);
 }
 
 export default function Admin() {
@@ -176,6 +159,7 @@ export default function Admin() {
         if (parts[1] && parts[1] == "k8s") items.push({title: 'Kubernetes'});  // 쿠버네티스 추가
         if (parts[1] && parts[1] == "snmp") items.push({title: 'SNMP'}); //snmp 추가
         if (parts[1] && parts[1] == "settings") items.push({title: '가입신청 관리'});
+        if (parts[1] && parts[1] == "resource-reservations") items.push({title: '자원 예약 현황'});
 
 
         if (parts[1] === 'terminal') {
@@ -194,11 +178,16 @@ export default function Admin() {
     const userMenuItems: MenuProps['items'] = [
         {key: 'profile', icon: <IdcardOutlined/>, label: '내 정보', disabled: true},
         {key: 'settings', icon: <SettingOutlined/>, label: '가입신청 관리'},
+        {key: 'resource-reservations', icon: <CalendarOutlined/>, label: '자원 예약 현황'},
         {key: 'logout', icon: <LogoutOutlined/>, label: '로그아웃', danger: true},
     ];
     const onUserMenuClick: MenuProps['onClick'] = ({key}) => {
         if (key === 'settings') {
             navigate('/ops/settings');
+            return;
+        }
+        if (key === 'resource-reservations') {
+            navigate('/ops/resource-reservations');
             return;
         }
         if (key === 'logout') {
@@ -240,10 +229,10 @@ export default function Admin() {
                             }}
                         >
                             <Typography.Text strong style={{display: 'block', marginBottom: 4}}>
-                                {`가입신청 | ${formatNotificationShortDate(item.created_at)}`}
+                                {`가입신청 | ${formatKstShortDate(item.created_at)}`}
                             </Typography.Text>
                             <Typography.Text type="secondary" style={{display: 'block', lineHeight: 1.5}}>
-                                {`${getApplicantName(item)}이 ${formatNotificationLongDate(item.created_at)}에 가입신청을 하였습니다.`}
+                                {`${getApplicantName(item)}이 ${formatKstDate(item.created_at)}에 가입신청을 하였습니다.`}
                             </Typography.Text>
                         </button>
                     ))}

@@ -1,0 +1,96 @@
+.resource-reservation-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.resource-reservation-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.resource-reservation-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.resource-reservation-summary {
+  margin-bottom: 0;
+}
+
+.resource-reservation-summary-card .ant-card-body {
+  padding: 14px 16px;
+}
+
+.resource-reservation-summary-value {
+  display: block;
+  margin-top: 4px;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.resource-reservation-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.resource-reservation-filter-select {
+  min-width: 150px;
+}
+
+.resource-reservation-search {
+  min-width: 280px;
+  flex: 1 1 320px;
+}
+
+.resource-reservation-table-wrap {
+  overflow-x: auto;
+}
+
+.resource-reservation-detail-list {
+  margin: 0;
+}
+
+.resource-reservation-json-preview {
+  margin: 0;
+  max-height: 280px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.resource-reservation-audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+@media (max-width: 768px) {
+  .resource-reservation-header,
+  .resource-reservation-toolbar {
+    flex-direction: column;
+  }
+
+  .resource-reservation-header .ant-space,
+  .resource-reservation-toolbar .ant-space {
+    width: 100%;
+  }
+
+  .resource-reservation-header .ant-btn,
+  .resource-reservation-toolbar .ant-btn {
+    width: 100%;
+  }
+
+  .resource-reservation-filter-select,
+  .resource-reservation-search,
+  .resource-reservation-filters .ant-btn {
+    width: 100%;
+  }
+}

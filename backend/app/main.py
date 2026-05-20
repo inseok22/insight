@@ -3,6 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.admin.resource import router as admin_resource_router
+from app.api.external.td import router as td_external_router
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.db.init_db import init_db
@@ -37,6 +39,8 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
+app.include_router(admin_resource_router, prefix="/api")
+app.include_router(td_external_router, prefix="/api")
 
 
 @app.get("/", tags=["root"])

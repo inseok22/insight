@@ -9,6 +9,7 @@ import GPU from './pages/sub_pages/GPU.tsx';
 import Power from './pages/sub_pages/Power.tsx';
 import Terminal from "./pages/sub_pages/Terminal.tsx";
 import Settings from './pages/sub_pages/Settings';
+import ResourceReservationPage from './pages/sub_pages/settings/ResourceReservationPage';
 import K8s from './pages/sub_pages/k8s.tsx'; //쿠버네티 추가됨
 import Snmp from './pages/sub_pages/Snmp.tsx'; //snmp 추가
 import Register from "./pages/Register.tsx"; // Desk회원가입
@@ -42,6 +43,7 @@ export default function App() {
                         <Route path=":target" element={<Terminal/>}/>
                     </Route>
                     <Route path="settings" element={<Settings/>}/>
+                    <Route path="resource-reservations" element={<ResourceReservationPage/>}/>
                 </Route>
             </Route>
             <Route path="*" element={<NotFoundInDashboard />} />
