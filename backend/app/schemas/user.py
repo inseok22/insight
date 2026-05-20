@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from app.models.user import ApprovalStatus
+from app.utils.timezone import to_kst_iso_system
 
 
 class UserCreate(BaseModel):
@@ -28,11 +29,19 @@ class UserRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    @field_serializer("created_at", "updated_at")
+    def serialize_system_datetime(self, value: datetime) -> str | None:
+        return to_kst_iso_system(value)
+
 
 class UserAdminRead(UserRead):
     reviewed_at: datetime | None = None
     reviewed_by: str | None = None
     rejection_reason: str | None = None
+
+    @field_serializer("reviewed_at")
+    def serialize_reviewed_at(self, value: datetime | None) -> str | None:
+        return to_kst_iso_system(value)
 
 
 class UserApprovalPatch(BaseModel):

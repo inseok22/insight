@@ -1,5 +1,4 @@
-from datetime import datetime
-
+from app.utils.timezone import now_kst
 HELP_TEXT = (
     "사용 가능한 명령어:\r\n"
     "  help   - 명령어 목록\r\n"
@@ -36,7 +35,7 @@ def handle_command(command: str, target: str, username: str) -> tuple[str, bool]
     if normalized == "target":
         return (f"\r\n{target}\r\n{PROMPT}", False)
     if normalized == "date":
-        return (f"\r\n{datetime.now().isoformat(sep=' ', timespec='seconds')}\r\n{PROMPT}", False)
+        return (f"\r\n{now_kst().isoformat(sep=' ', timespec='seconds')}\r\n{PROMPT}", False)
     if normalized == "clear":
         return ("\x1b[2J\x1b[H" + PROMPT, False)
     if normalized == "exit":

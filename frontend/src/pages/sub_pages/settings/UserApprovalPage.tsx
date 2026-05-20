@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Descriptions, Input, Modal, Space, Table, Tag, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { formatKstDateTime } from '../../../utils/time';
 
 type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
@@ -30,13 +31,6 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000
 function getAuthHeader(): Record<string, string> {
   const token = localStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-function formatDate(date?: string | null) {
-  if (!date) return '-';
-  const d = new Date(date);
-  if (Number.isNaN(d.getTime())) return date;
-  return d.toLocaleString();
 }
 
 function renderStatusTag(status?: ApprovalStatus) {
@@ -175,7 +169,7 @@ export default function UserApprovalPage() {
       dataIndex: 'created_at',
       key: 'created_at',
       width: 200,
-      render: (value: string) => formatDate(value),
+      render: (value: string) => formatKstDateTime(value),
     },
     {
       title: '이름',
@@ -285,7 +279,7 @@ export default function UserApprovalPage() {
           승인 전, 반드시 Desk/OpenLDAP 수동 등록 완료 여부를 확인하세요.
         </Typography.Paragraph>
         <Descriptions bordered size="small" column={1}>
-          <Descriptions.Item label="신청일시">{formatDate(selectedRecord?.created_at)}</Descriptions.Item>
+          <Descriptions.Item label="신청일시">{formatKstDateTime(selectedRecord?.created_at)}</Descriptions.Item>
           <Descriptions.Item label="이름">{selectedRecord?.full_name || '-'}</Descriptions.Item>
           <Descriptions.Item label="아이디">{selectedRecord?.username || '-'}</Descriptions.Item>
           <Descriptions.Item label="이메일">{selectedRecord?.email || '-'}</Descriptions.Item>

@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     # str로만 받고 property에서 파싱
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     terminal_targets: str = "master,node-a,node-b"
+    td_api_key: str | None = Field(default=None, validation_alias="TD_API_KEY")
+    slurm_reservation_mock: bool = Field(default=True, validation_alias="SLURM_RESERVATION_MOCK")
+    slurm_rest_base_url: str = Field(default="http://slurmrestd:6820", validation_alias="SLURM_REST_BASE_URL")
+    slurm_rest_api_version: str = Field(default="v0.0.44", validation_alias="SLURM_REST_API_VERSION")
+    slurm_rest_user_name: str | None = Field(default=None, validation_alias="SLURM_REST_USER_NAME")
+    slurm_rest_user_token: str | None = Field(default=None, validation_alias="SLURM_REST_USER_TOKEN")
 
     initial_admin_username: str = "admin"
     initial_admin_password: str = "admin"
