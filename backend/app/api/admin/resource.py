@@ -11,10 +11,12 @@ from app.schemas.resource_reservation import (
     ResourceReservationRejectRequest,
     ResourceReservationRequestListResponse,
     ResourceReservationRetryRequest,
+    SlurmReservationListResponse,
 )
 from app.services.resource_reservation_service import (
     approve_resource_reservation_request,
     list_resource_reservation_requests,
+    list_resource_reservations,
     reject_resource_reservation_request,
     retry_slurm_reservation_request,
 )
@@ -26,6 +28,14 @@ AdminDbDep = Annotated[Session, Depends(get_admin_db)]
 @router.get("/reservation-requests", response_model=ResourceReservationRequestListResponse)
 def read_resource_reservation_requests(_: AdminUserDep, db: AdminDbDep) -> ResourceReservationRequestListResponse:
     return list_resource_reservation_requests(db)
+
+
+@router.get("/reservations", response_model=SlurmReservationListResponse)
+def read_resource_reservations(_: AdminUserDep, db: AdminDbDep) -> SlurmReservationListResponse:
+    try:
+        return list_resource_reservations(db)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
 
 @router.post("/reservation-requests/{request_id}/approve", response_model=ResourceReservationActionResponse)

@@ -12,9 +12,12 @@ from app.schemas.resource_reservation import (
     ResourceReservationActionResponse,
     ResourceReservationRequestListResponse,
     ResourceReservationRequestResponse,
+    SlurmReservationItem,
+    SlurmReservationListResponse,
 )
-from app.services.slurm_service import create_or_update_slurm_reservation
+from app.services.slurm_service import create_or_update_slurm_reservation, list_slurm_reservations
 from app.utils.timezone import (
+    KST,
     epoch_seconds_from_kst_business_datetime,
     now_kst,
     parse_td_schedule_as_kst,
@@ -78,6 +81,211 @@ def list_resource_reservation_requests(db: Session) -> ResourceReservationReques
         generatedAt=now_kst().isoformat(timespec="seconds"),
         items=[_to_list_item(request) for request in requests],
     )
+
+
+def list_resource_reservations(db: Session) -> SlurmReservationListResponse:
+    """실제 Slurm(GET /reservations)에 등록된 예약을 조회하고 Insight DB와 교차해 반환한다.
+
+    MOCK 모드면 Slurm을 호출하지 않고 빈 목록을 반환한다(slurm_service에서 처리).
+    조회 실패 시 RuntimeError를 던져 호출부(엔드포인트)가 502로 변환한다.
+    """
+    result = list_slurm_reservations()
+    now = now_kst()
+    generated_at = now.isoformat(timespec="seconds")
+    if not result.success:
+        raise RuntimeError(result.error or "Slurm 예약 정보를 조회하지 못했습니다.")
+
+    by_name = _index_reserved_requests(db)
+    items: list[SlurmReservationItem] = []
+    for index, raw in enumerate(result.reservations):
+        item = _build_slurm_reservation_item(raw, by_name, now, index)
+        if item is not None:
+            items.append(item)
+    return SlurmReservationListResponse(generatedAt=generated_at, items=items)
+
+
+def _index_reserved_requests(db: Session) -> dict[str, ResourceReservationRequest]:
+    statement = select(ResourceReservationRequest).where(ResourceReservationRequest.slurm_reservation_name.isnot(None))
+    by_name: dict[str, ResourceReservationRequest] = {}
+    for request in db.execute(statement).scalars().all():
+        if request.slurm_reservation_name:
+            by_name.setdefault(request.slurm_reservation_name, request)
+    return by_name
+
+
+def _build_slurm_reservation_item(
+    raw: object,
+    by_name: dict[str, ResourceReservationRequest],
+    now: datetime,
+    index: int,
+) -> SlurmReservationItem | None:
+    if not isinstance(raw, dict):
+        return None
+
+    name = _raw_text(raw.get("name")) or ""
+    db_req = by_name.get(name) if name else None
+
+    start_dt = _slurm_epoch_to_kst(raw.get("start_time"))
+    end_dt = _slurm_epoch_to_kst(raw.get("end_time"))
+    slurm_partition = _raw_text(raw.get("partition")) or ""
+    tres = _blank_to_none(_raw_text(raw.get("tres")))
+    node_count = _slurm_number(raw.get("node_count"))
+    users = _slurm_users(raw.get("users"))
+
+    if db_req and db_req.partition_type:
+        partition_type = db_req.partition_type
+    else:
+        partition_type = _infer_partition_type(slurm_partition, tres)
+
+    if db_req:
+        cpu_cores = db_req.requested_cpu_cores
+        memory_gb = db_req.requested_memory_gb
+        gpu_node_count = db_req.requested_gpu_nodes
+    else:
+        cpu_cores, memory_gb = _parse_tres_cpu_mem(tres)
+        gpu_node_count = node_count if partition_type == "GPU" else None
+
+    requester = db_req.requester_username if (db_req and db_req.requester_username) else (users[0] if users else "")
+    title = db_req.title if (db_req and db_req.title) else name
+
+    return SlurmReservationItem(
+        id=name or f"resv-{index}",
+        reservationName=name,
+        displayStatus=_derive_reservation_status(start_dt, end_dt, now, name),
+        source="INSIGHT" if db_req else "SLURM_MANUAL",
+        externalTicketId=(db_req.external_ticket_id if db_req else None),
+        title=title,
+        requesterUsername=requester,
+        requesterEmail=(db_req.notification_email if db_req else None),
+        users=users,
+        partitionType=partition_type,
+        slurmPartition=slurm_partition,
+        startAt=start_dt.isoformat(timespec="seconds") if start_dt else "",
+        endAt=end_dt.isoformat(timespec="seconds") if end_dt else "",
+        durationText=_format_duration_minutes(_minutes_between(start_dt, end_dt)),
+        cpuCores=cpu_cores,
+        memoryGb=memory_gb,
+        gpuNodeCount=gpu_node_count,
+        nodeList=_blank_to_none(_raw_text(raw.get("node_list"))),
+        tres=tres,
+        comment=_blank_to_none(_raw_text(raw.get("comment"))),
+        slurmExists=True,
+        insightRequestExists=db_req is not None,
+        lastSyncedAt=now.isoformat(timespec="seconds"),
+    )
+
+
+def _slurm_number(value: object) -> int | None:
+    """Slurm 응답의 숫자 필드를 int로 정규화한다(평문 int 또는 {set,infinite,number} 래퍼 모두 지원)."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return int(value)
+    if isinstance(value, dict):
+        if value.get("set") is False or value.get("infinite") is True:
+            return None
+        number = value.get("number")
+        if isinstance(number, (int, float)) and not isinstance(number, bool):
+            return int(number)
+    return None
+
+
+def _slurm_epoch_to_kst(value: object) -> datetime | None:
+    ts = _slurm_number(value)
+    if ts is None or ts <= 0:
+        return None
+    try:
+        return datetime.fromtimestamp(ts, tz=timezone.utc).astimezone(KST)
+    except (OverflowError, OSError, ValueError):
+        return None
+
+
+def _slurm_users(value: object) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    text = _raw_text(value)
+    if not text:
+        return []
+    return [part.strip() for part in text.split(",") if part.strip()]
+
+
+def _infer_partition_type(partition: str | None, tres: str | None) -> str:
+    haystack = f"{partition or ''} {tres or ''}".lower()
+    if "gpu" in haystack:
+        return "GPU"
+    if "bigmem" in haystack:
+        return "BIGMEM"
+    return "GENERAL"
+
+
+def _parse_tres_cpu_mem(tres: str | None) -> tuple[int | None, int | None]:
+    cpu: int | None = None
+    mem: int | None = None
+    if not tres:
+        return cpu, mem
+    for part in tres.split(","):
+        item = part.strip()
+        if item.startswith("cpu="):
+            try:
+                cpu = int(item[4:])
+            except ValueError:
+                pass
+        elif item.startswith("mem="):
+            mem = _parse_mem_to_gb(item[4:].strip())
+    return cpu, mem
+
+
+def _parse_mem_to_gb(raw: str) -> int | None:
+    if not raw:
+        return None
+    text = raw.upper()
+    try:
+        if text.endswith("T"):
+            return int(float(text[:-1]) * 1024)
+        if text.endswith("G"):
+            return int(float(text[:-1]))
+        if text.endswith("M"):
+            return int(float(text[:-1]) / 1024)
+        return int(float(text))
+    except ValueError:
+        return None
+
+
+def _minutes_between(start_dt: datetime | None, end_dt: datetime | None) -> int | None:
+    if start_dt is None or end_dt is None:
+        return None
+    minutes = int((end_dt - start_dt).total_seconds() // 60)
+    return minutes if minutes > 0 else None
+
+
+def _format_duration_minutes(total: int | None) -> str:
+    if total is None or total <= 0:
+        return ""
+    days, remainder = divmod(total, 1440)
+    hours, minutes = divmod(remainder, 60)
+    parts = []
+    if days:
+        parts.append(f"{days}d")
+    if hours:
+        parts.append(f"{hours}h")
+    if minutes:
+        parts.append(f"{minutes}m")
+    return "".join(parts) or "0m"
+
+
+def _derive_reservation_status(
+    start_dt: datetime | None,
+    end_dt: datetime | None,
+    now: datetime,
+    name: str,
+) -> str:
+    if not name or start_dt is None or end_dt is None:
+        return "ERROR"
+    if now < start_dt:
+        return "UPCOMING"
+    if start_dt <= now < end_dt:
+        return "RUNNING"
+    return "ENDED"
 
 
 def approve_resource_reservation_request(
@@ -170,13 +378,18 @@ def build_slurm_reservation_payload(request: ResourceReservationRequest) -> dict
     if errors:
         raise ValueError("Slurm payload를 생성할 수 없습니다: " + " ".join(errors))
 
-    reservation_name = _safe_slurm_reservation_name(request.slurm_reservation_name or f"insight-rsv-{request.id}")
+    # reservation name은 externalTicketId를 우선 사용한다(slurmrestd 목표 포맷). 재시도 시에는
+    # 처음 정한 이름(slurm_reservation_name)을 그대로 재사용한다.
+    reservation_name = _safe_slurm_reservation_name(
+        request.slurm_reservation_name or request.external_ticket_id or f"insight-rsv-{request.id}"
+    )
     payload: dict[str, object] = {
         "name": reservation_name,
-        "users": [request.requester_username],
+        "users": request.requester_username,
         "partition": request.slurm_partition,
-        "start_time": {"set": True, "number": epoch_seconds_from_kst_business_datetime(request.start_at)},
-        "duration": {"set": True, "number": request.duration_minutes},
+        "start_time": {"set": True, "infinite": False, "number": epoch_seconds_from_kst_business_datetime(request.start_at)},
+        "duration": {"set": True, "infinite": False, "number": request.duration_minutes},
+        "flags": ["IGNORE_JOBS"],
         "comment": (
             f"source={request.source_system or 'TD'}; request_id={request.id}; "
             f"ticket_id={request.external_ticket_id or ''}; requester={request.requester_username}"
@@ -184,17 +397,19 @@ def build_slurm_reservation_payload(request: ResourceReservationRequest) -> dict
     }
 
     if request.partition_type == "GPU":
-        payload["node_count"] = {"set": True, "number": request.requested_gpu_nodes}
+        payload["node_count"] = {"set": True, "infinite": False, "number": request.requested_gpu_nodes}
     else:
-        tres_parts = []
+        # slurmrestd v0.0.44는 tres를 문자열이 아니라 리스트(TRES 객체 목록)로 요구한다.
+        # mem은 Slurm TRES 기준 MB 단위이므로 GB → MB(×1024)로 변환한다.
+        tres_list: list[dict[str, object]] = []
         if request.requested_cpu_cores is not None:
-            tres_parts.append(f"cpu={request.requested_cpu_cores}")
+            tres_list.append({"type": "cpu", "count": request.requested_cpu_cores})
         if request.requested_memory_gb is not None:
-            tres_parts.append(f"mem={request.requested_memory_gb}G")
-        if tres_parts:
-            payload["tres"] = ",".join(tres_parts)
-        # 정책 확정 전까지 GENERAL/BIGMEM 예약은 기본 1 node로 요청한다. 필요 시 edition/site values로 조정한다.
-        payload["node_count"] = {"set": True, "number": 1}
+            tres_list.append({"type": "mem", "count": request.requested_memory_gb * 1024})
+        if tres_list:
+            payload["tres"] = tres_list
+        # 정책 확정 전까지 GENERAL/BIGMEM 예약은 기본 1 node로 요청한다.
+        payload["node_count"] = {"set": True, "infinite": False, "number": 1}
 
     return payload
 

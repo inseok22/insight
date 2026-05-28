@@ -74,3 +74,34 @@ class ResourceReservationActionResponse(BaseModel):
     message: str
     slurmReservationName: str | None = None
     slurmError: str | None = None
+
+
+class SlurmReservationItem(BaseModel):
+    id: str
+    reservationName: str
+    displayStatus: str
+    source: str
+    externalTicketId: str | None
+    title: str
+    requesterUsername: str
+    requesterEmail: str | None
+    users: list[str]
+    partitionType: str
+    slurmPartition: str
+    startAt: str
+    endAt: str
+    durationText: str
+    cpuCores: int | None
+    memoryGb: int | None
+    gpuNodeCount: int | None
+    nodeList: str | None
+    tres: str | None
+    comment: str | None
+    slurmExists: bool
+    insightRequestExists: bool
+    lastSyncedAt: str | None
+
+
+class SlurmReservationListResponse(BaseModel):
+    generatedAt: str
+    items: list[SlurmReservationItem]

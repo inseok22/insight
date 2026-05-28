@@ -31,7 +31,7 @@ type StatusFilter = ReservationStatus | 'ALL';
 type PartitionFilter = PartitionType | 'ALL';
 type SourceFilter = ReservationSource | 'ALL';
 
-const isUsingDummyReservations = import.meta.env.VITE_USE_DUMMY_RESERVATIONS !== 'false';
+const isUsingDummyReservations = import.meta.env.VITE_USE_DUMMY_RESERVATIONS === 'true';
 
 const statusLabels: Record<ReservationStatus, string> = {
   RUNNING: '진행 중',
@@ -265,7 +265,7 @@ export default function ResourceReservationLookupTab() {
     <div className="resource-reservation-page">
       <div className="resource-reservation-toolbar">
         <Typography.Text type="secondary">
-          Slurm에 등록된 자원 예약 정보를 조회합니다. 현재는 더미 데이터로 표시됩니다.
+          Slurm에 등록된 자원 예약 정보를 실시간으로 조회합니다.
         </Typography.Text>
         <Space wrap>
           <Typography.Text type="secondary">
