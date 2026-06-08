@@ -50,7 +50,10 @@ def create_user(db: Session, payload: UserCreate) -> User:
     user = User(
         username=payload.username,
         password_hash=hash_password(payload.password),
-        full_name=payload.full_name,
+        surname=payload.surname,
+        given_name=payload.given_name,
+        full_name=f"{payload.surname}{payload.given_name}",  # 성+이름 (표시/검색용)
+        group_name=payload.group_name,
         email=payload.email,
         birth_date=payload.birth_date,
         affiliation=payload.affiliation,

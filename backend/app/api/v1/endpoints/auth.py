@@ -42,7 +42,9 @@ def register(payload: RegisterRequest, db: UserDbDep) -> UserRead:
     user_data = UserCreate(
         username=payload.username,
         password=payload.password,
-        full_name=payload.full_name,
+        surname=payload.surname,
+        given_name=payload.given_name,
+        group_name=payload.group_name,
         email=payload.email,
         birth_date=payload.birth_date,
         affiliation=payload.affiliation,
