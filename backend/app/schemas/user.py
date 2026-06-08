@@ -34,6 +34,7 @@ class UserRead(BaseModel):
     given_name: str | None = None
     full_name: str | None = None
     group_name: str | None = None
+    uid_number: int | None = None
     email: str | None = None
     birth_date: str | None = None
     affiliation: str | None = None

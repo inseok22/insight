@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
+
+UID_NUMBER_START = 10001  # LDAP uidNumber 시작값
 
 from app.core.security import hash_password
 from app.models.user import ApprovalStatus, User
@@ -78,6 +80,10 @@ def approve_user(db: Session, *, user_id: int, reviewed_by: str) -> User:
     user.reviewed_at = datetime.now(timezone.utc)
     user.reviewed_by = reviewed_by
     user.rejection_reason = None
+    # uidNumber 발급: 승인 순서대로 10001부터, 중복 없음 (이미 있으면 유지)
+    if user.uid_number is None:
+        current_max = db.scalar(select(func.max(User.uid_number)))
+        user.uid_number = UID_NUMBER_START if current_max is None else current_max + 1
     db.add(user)
     db.commit()
     db.refresh(user)

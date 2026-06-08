@@ -23,6 +23,7 @@ class User(UserBase):
     given_name: Mapped[str | None] = mapped_column(String(50), nullable=True)     # LDAP cn (이름)
     full_name: Mapped[str | None] = mapped_column(String(100), nullable=True)     # surname+given_name 조합 (표시/검색용)
     group_name: Mapped[str] = mapped_column(String(50), default="tslurm", nullable=False)  # LDAP gidNumber 매핑용
+    uid_number: Mapped[int | None] = mapped_column(unique=True, nullable=True)    # LDAP uidNumber, 승인 시 10001~ 발급
     email: Mapped[str | None] = mapped_column(String(100), nullable=True)         # LDAP mail
     birth_date: Mapped[str | None] = mapped_column(String(20), nullable=True)     # 데스크 기록용 (예: "1990-01-15")
     affiliation: Mapped[str | None] = mapped_column(String(100), nullable=True)   # 데스크 기록용 (소속)
