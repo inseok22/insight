@@ -1,3 +1,8 @@
+import base64
+import binascii
+import hashlib
+import hmac
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -7,7 +12,13 @@ from pwdlib import PasswordHash
 
 from app.core.config import get_settings
 
-password_hash = PasswordHash.recommended()
+# 신규 비밀번호는 LDAP {SSHA}(salted SHA-1) 스킴으로 저장한다.
+SSHA_PREFIX = "{SSHA}"
+SSHA_SALT_BYTES = 8
+_SHA1_DIGEST_BYTES = 20
+
+# 레거시(argon2id) 해시 검증 호환용
+_legacy_hash = PasswordHash.recommended()
 settings = get_settings()
 
 
@@ -16,11 +27,22 @@ class TokenError(Exception):
 
 
 def hash_password(password: str) -> str:
-    return password_hash.hash(password)
+    salt = os.urandom(SSHA_SALT_BYTES)
+    digest = hashlib.sha1(password.encode("utf-8") + salt).digest()
+    return SSHA_PREFIX + base64.b64encode(digest + salt).decode("ascii")
 
 
 def verify_password(password: str, hashed_password: str) -> bool:
-    return password_hash.verify(password, hashed_password)
+    if hashed_password.startswith(SSHA_PREFIX):
+        try:
+            decoded = base64.b64decode(hashed_password[len(SSHA_PREFIX):])
+        except (binascii.Error, ValueError):
+            return False
+        digest, salt = decoded[:_SHA1_DIGEST_BYTES], decoded[_SHA1_DIGEST_BYTES:]
+        expected = hashlib.sha1(password.encode("utf-8") + salt).digest()
+        return hmac.compare_digest(digest, expected)
+    # {SSHA} 도입 이전에 저장된 argon2id 해시 호환
+    return _legacy_hash.verify(password, hashed_password)
 
 
 def create_access_token(subject: str, extra_claims: dict[str, Any] | None = None) -> str:

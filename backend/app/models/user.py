@@ -18,7 +18,8 @@ class User(UserBase):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True)    # LDAP uid
-    password_hash: Mapped[str] = mapped_column(String(255))                       # argon2id, LDAP userPassword
+    password_hash: Mapped[str] = mapped_column(String(255))                       # {SSHA}, LDAP userPassword
+    gecos: Mapped[str] = mapped_column(String(50), default="USER", server_default="USER", nullable=False)  # LDAP gecos (USER 고정)
     surname: Mapped[str | None] = mapped_column(String(50), nullable=True)        # LDAP sn (성)
     given_name: Mapped[str | None] = mapped_column(String(50), nullable=True)     # LDAP cn (이름)
     full_name: Mapped[str | None] = mapped_column(String(100), nullable=True)     # surname+given_name 조합 (표시/검색용)

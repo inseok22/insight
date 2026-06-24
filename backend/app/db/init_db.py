@@ -12,8 +12,22 @@ def init_db() -> None:
     AdminBase.metadata.create_all(bind=admin_engine)
     UserBase.metadata.create_all(bind=user_engine)
     ensure_resource_reservation_schema()
+    ensure_user_gecos_column()
     with AdminSessionLocal() as db:  # type: Session
         ensure_initial_admin(db)
+
+
+def ensure_user_gecos_column() -> None:
+    inspector = inspect(user_engine)
+    if "users" not in inspector.get_table_names():
+        return
+
+    columns = {column["name"] for column in inspector.get_columns("users")}
+    if "gecos" in columns:
+        return
+
+    with user_engine.begin() as connection:
+        connection.execute(text("ALTER TABLE users ADD COLUMN gecos VARCHAR(50) NOT NULL DEFAULT 'USER'"))
 
 
 def ensure_resource_reservation_schema() -> None:
