@@ -3,7 +3,7 @@ import {Layout, Menu, Breadcrumb, Button, theme, Avatar, Dropdown, Space, Typogr
 import type {MenuProps} from 'antd';
 import {
     DashboardOutlined, CloudServerOutlined, DeploymentUnitOutlined, DatabaseOutlined, InteractionOutlined, UserOutlined, SettingOutlined,
-    MenuFoldOutlined, MenuUnfoldOutlined, DownOutlined, LogoutOutlined, IdcardOutlined, CloudOutlined, ApiOutlined, BellOutlined, CalendarOutlined //clo는 쿠버네티스
+    MenuFoldOutlined, MenuUnfoldOutlined, DownOutlined, LogoutOutlined, IdcardOutlined, CloudOutlined, ApiOutlined, BellOutlined, CalendarOutlined, ThunderboltOutlined //clo는 쿠버네티스
 } from '@ant-design/icons';
 import {Outlet, useLocation, useNavigate} from 'react-router-dom';
 import {TERMINALS} from '../config/terminals';
@@ -55,6 +55,7 @@ export default function Admin() {
             {key: '/ops/power', icon: <InteractionOutlined />, label: 'Power'},
             {key: '/ops/k8s', icon: <CloudOutlined />, label: 'Kubernetes'}, //쿠버네티스 추가
             {key: '/ops/snmp', icon: <ApiOutlined />, label: 'SNMP'}, //snmp추가
+            {key: '/ops/vllm', icon: <ThunderboltOutlined />, label: 'vLLM'}, //vLLM 추가
             // {
             //     key: 'terminal', label: '터미널', icon: <CodeOutlined/>, children: terminalChildren,
             // },
@@ -73,6 +74,7 @@ export default function Admin() {
         if (parts[1] === 'terminal' && parts[2]) return `/ops/terminal/${parts[2]}`;
         if (parts[1] === 'k8s') return '/ops/k8s';  // 쿠버네티스 추가
         if (parts[1] === 'snmp') return '/ops/snmp'; // snmp추가
+        if (parts[1] === 'vllm') return '/ops/vllm'; // vLLM 추가
         if (parts[1] === 'settings') return '/ops/settings';
         if (parts[1]) return `/ops/${parts[1]}`;
         return '/ops/dashboard';
@@ -158,6 +160,7 @@ export default function Admin() {
         if (parts[1] && parts[1] == "power") items.push({title: 'Power'});
         if (parts[1] && parts[1] == "k8s") items.push({title: 'Kubernetes'});  // 쿠버네티스 추가
         if (parts[1] && parts[1] == "snmp") items.push({title: 'SNMP'}); //snmp 추가
+        if (parts[1] && parts[1] == "vllm") items.push({title: 'vLLM'}); //vLLM 추가
         if (parts[1] && parts[1] == "settings") items.push({title: '가입신청 관리'});
         if (parts[1] && parts[1] == "resource-reservations") items.push({title: '자원 예약 현황'});
 

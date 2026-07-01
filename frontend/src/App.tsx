@@ -12,6 +12,7 @@ import Settings from './pages/sub_pages/Settings';
 import ResourceReservationPage from './pages/sub_pages/settings/ResourceReservationPage';
 import K8s from './pages/sub_pages/k8s.tsx'; //쿠버네티 추가됨
 import Snmp from './pages/sub_pages/Snmp.tsx'; //snmp 추가
+import VLLM from './pages/sub_pages/vLLM.tsx'; //vLLM 추가
 import Register from "./pages/Register.tsx"; // Desk회원가입
 
 import NotFoundInDashboard from "./pages/error/NotFoundInDashboard.tsx";
@@ -36,6 +37,7 @@ export default function App() {
                     <Route path="power" element={<Power/>}/>
                     <Route path="k8s" element={<K8s/>}/>
                     <Route path="snmp" element={<Snmp/>}/>
+                    <Route path="vllm" element={<VLLM/>}/>
 
 
                     <Route path="terminal">

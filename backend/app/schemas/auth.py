@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.admin import AdminRead
+from app.schemas.user import USERNAME_PATTERN, GroupName
 
 
 class LoginRequest(BaseModel):
@@ -9,9 +10,11 @@ class LoginRequest(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    username: str = Field(min_length=3, max_length=50)
+    username: str = Field(pattern=USERNAME_PATTERN, max_length=50)
     password: str = Field(min_length=4, max_length=128)
-    full_name: str | None = Field(default=None, max_length=100)
+    surname: str = Field(min_length=1, max_length=50)        # sn (성)
+    given_name: str = Field(min_length=1, max_length=50)     # cn (이름)
+    group_name: GroupName = "tslurm"
     email: str | None = Field(default=None, max_length=100)
     birth_date: str | None = Field(default=None, max_length=20)
     affiliation: str | None = Field(default=None, max_length=100)

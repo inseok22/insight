@@ -8,7 +8,10 @@ type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 type UserRow = {
   id: number;
   username: string;
+  surname?: string | null;
+  given_name?: string | null;
   full_name?: string | null;
+  group_name?: string | null;
   email?: string | null;
   birth_date?: string | null;
   affiliation?: string | null;
@@ -282,6 +285,7 @@ export default function UserApprovalPage() {
           <Descriptions.Item label="신청일시">{formatKstDateTime(selectedRecord?.created_at)}</Descriptions.Item>
           <Descriptions.Item label="이름">{selectedRecord?.full_name || '-'}</Descriptions.Item>
           <Descriptions.Item label="아이디">{selectedRecord?.username || '-'}</Descriptions.Item>
+          <Descriptions.Item label="그룹">{selectedRecord?.group_name || '-'}</Descriptions.Item>
           <Descriptions.Item label="이메일">{selectedRecord?.email || '-'}</Descriptions.Item>
           <Descriptions.Item label="생년월일">{selectedRecord?.birth_date || '-'}</Descriptions.Item>
           <Descriptions.Item label="소속">{selectedRecord?.affiliation || '-'}</Descriptions.Item>

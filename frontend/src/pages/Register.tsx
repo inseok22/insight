@@ -7,13 +7,18 @@ type RegisterFields = {
     username: string;
     password: string;
     confirmPassword: string;
-    full_name: string;
+    surname: string;       // 성 (LDAP sn)
+    given_name: string;    // 이름 (LDAP cn)
+    group_name: string;    // 그룹 (LDAP gidNumber 매핑)
     birth_year: string;
     birth_month: string;
     birth_day: string;
     affiliation: string;
     email: string;
 };
+
+// 그룹 목록 (현재는 tslurm만, gidNumber 변환은 백엔드 담당)
+const groupOptions = [{ value: 'tslurm', label: 'tslurm' }];
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -52,7 +57,9 @@ export default function Register() {
                 body: JSON.stringify({
                     username: values.username,
                     password: values.password,
-                    full_name: values.full_name,
+                    surname: values.surname,
+                    given_name: values.given_name,
+                    group_name: values.group_name,
                     email: values.email,
                     birth_date,
                     affiliation: values.affiliation,
@@ -99,16 +106,19 @@ export default function Register() {
                     requiredMark="optional"
                     autoComplete="off"
                 >
-                    {/* 아이디 */}
+                    {/* 아이디 (LDAP uid → 소문자/숫자/-/_ 만, 소문자로 시작) */}
                     <Form.Item
                         label="아이디"
                         name="username"
                         rules={[
                             { required: true, message: '아이디를 입력해 주세요.' },
-                            { min: 3, message: '3자 이상 입력해 주세요.' },
+                            {
+                                pattern: /^[a-z][a-z0-9_-]{2,31}$/,
+                                message: '소문자로 시작, 소문자·숫자·-·_ 만, 3~32자 (공백/대문자/한글 불가)',
+                            },
                         ]}
                     >
-                        <Input size="large" prefix={<UserOutlined />} placeholder="아이디" allowClear />
+                        <Input size="large" prefix={<UserOutlined />} placeholder="아이디 (예: user1)" allowClear />
                     </Form.Item>
 
                     {/* 비밀번호 */}
@@ -132,13 +142,34 @@ export default function Register() {
                         <Input.Password size="large" prefix={<LockOutlined />} placeholder="비밀번호 재확인" />
                     </Form.Item>
 
-                    {/* 이름 */}
+                    {/* 성 / 이름 (LDAP sn / cn) */}
+                    <Form.Item label="이름" required>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <Form.Item
+                                name="surname"
+                                noStyle
+                                rules={[{ required: true, message: '성을 입력해 주세요.' }]}
+                            >
+                                <Input size="large" placeholder="성" style={{ width: 120 }} allowClear />
+                            </Form.Item>
+                            <Form.Item
+                                name="given_name"
+                                noStyle
+                                rules={[{ required: true, message: '이름을 입력해 주세요.' }]}
+                            >
+                                <Input size="large" placeholder="이름" style={{ flex: 1 }} allowClear />
+                            </Form.Item>
+                        </div>
+                    </Form.Item>
+
+                    {/* 그룹 (LDAP gidNumber 매핑) */}
                     <Form.Item
-                        label="이름"
-                        name="full_name"
-                        rules={[{ required: true, message: '이름을 입력해 주세요.' }]}
+                        label="그룹"
+                        name="group_name"
+                        initialValue="tslurm"
+                        rules={[{ required: true, message: '그룹을 선택해 주세요.' }]}
                     >
-                        <Input size="large" placeholder="이름" allowClear />
+                        <Select size="large" placeholder="그룹 선택" options={groupOptions} />
                     </Form.Item>
 
                     {/* 생년월일: 년/월/일 세 개 필드 조합 */}

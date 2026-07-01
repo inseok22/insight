@@ -1,15 +1,25 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from app.models.user import ApprovalStatus
 from app.utils.timezone import to_kst_iso_system
 
+# LDAP uid / POSIX 계정명 규칙: 소문자로 시작, 소문자·숫자·-·_ 만, 3~32자
+USERNAME_PATTERN = r"^[a-z][a-z0-9_-]{2,31}$"
+
+# 그룹 라벨 → LDAP gidNumber 매핑 (현재는 tslurm만)
+GROUP_GID_MAP: dict[str, int] = {"tslurm": 10002}
+GroupName = Literal["tslurm"]
+
 
 class UserCreate(BaseModel):
-    username: str = Field(min_length=3, max_length=50)
+    username: str = Field(pattern=USERNAME_PATTERN, max_length=50)
     password: str = Field(min_length=4, max_length=128)
-    full_name: str | None = Field(default=None, max_length=100)
+    surname: str = Field(min_length=1, max_length=50)        # sn (성)
+    given_name: str = Field(min_length=1, max_length=50)     # cn (이름)
+    group_name: GroupName = "tslurm"                         # gidNumber 매핑
     email: str | None = Field(default=None, max_length=100)
     birth_date: str | None = Field(default=None, max_length=20)
     affiliation: str | None = Field(default=None, max_length=100)
@@ -20,7 +30,11 @@ class UserRead(BaseModel):
 
     id: int
     username: str
+    surname: str | None = None
+    given_name: str | None = None
     full_name: str | None = None
+    group_name: str | None = None
+    uid_number: int | None = None
     email: str | None = None
     birth_date: str | None = None
     affiliation: str | None = None

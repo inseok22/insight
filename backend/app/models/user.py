@@ -17,12 +17,17 @@ class User(UserBase):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
-    password_hash: Mapped[str] = mapped_column(String(255))
-    full_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    email: Mapped[str | None] = mapped_column(String(100), nullable=True)        # 추가
-    birth_date: Mapped[str | None] = mapped_column(String(20), nullable=True)    # 추가 (예: "1990-01-15")
-    affiliation: Mapped[str | None] = mapped_column(String(100), nullable=True)  # 추가 (소속)
+    username: Mapped[str] = mapped_column(String(50), unique=True, index=True)    # LDAP uid
+    password_hash: Mapped[str] = mapped_column(String(255))                       # {SSHA}, LDAP userPassword
+    gecos: Mapped[str] = mapped_column(String(50), default="USER", server_default="USER", nullable=False)  # LDAP gecos (USER 고정)
+    surname: Mapped[str | None] = mapped_column(String(50), nullable=True)        # LDAP sn (성)
+    given_name: Mapped[str | None] = mapped_column(String(50), nullable=True)     # LDAP cn (이름)
+    full_name: Mapped[str | None] = mapped_column(String(100), nullable=True)     # surname+given_name 조합 (표시/검색용)
+    group_name: Mapped[str] = mapped_column(String(50), default="tslurm", nullable=False)  # LDAP gidNumber 매핑용
+    uid_number: Mapped[int | None] = mapped_column(unique=True, nullable=True)    # LDAP uidNumber, 승인 시 10001~ 발급
+    email: Mapped[str | None] = mapped_column(String(100), nullable=True)         # LDAP mail
+    birth_date: Mapped[str | None] = mapped_column(String(20), nullable=True)     # 데스크 기록용 (예: "1990-01-15")
+    affiliation: Mapped[str | None] = mapped_column(String(100), nullable=True)   # 데스크 기록용 (소속)
     is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     approval_status: Mapped[ApprovalStatus] = mapped_column(
         SqlEnum(
