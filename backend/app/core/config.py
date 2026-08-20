@@ -40,6 +40,18 @@ class Settings(BaseSettings):
     initial_admin_password: str = "admin"
     initial_admin_name: str = "Administrator"
 
+    # LSC(OpenLDAP 동기화) 원격 실행 설정 — 승인 시 SSH로 스크립트 실행
+    lsc_sync_enabled: bool = Field(default=True, validation_alias="LSC_SYNC_ENABLED")
+    lsc_ssh_host: str = Field(default="192.168.0.125", validation_alias="LSC_SSH_HOST")
+    lsc_ssh_port: int = Field(default=10022, validation_alias="LSC_SSH_PORT")
+    lsc_ssh_user: str = Field(default="root", validation_alias="LSC_SSH_USER")
+    lsc_ssh_key_path: str | None = Field(default=None, validation_alias="LSC_SSH_KEY_PATH")
+    lsc_ssh_timeout: int = Field(default=120, validation_alias="LSC_SSH_TIMEOUT")
+    lsc_sync_command: str = Field(
+        default="/usr/local/bin/lsc-sync-now.sh && /usr/local/bin/make_home.sh",
+        validation_alias="LSC_SYNC_COMMAND",
+    )
+
     overview_url: str | None = None
     node_url: str | None = None
     job_url: str | None = None

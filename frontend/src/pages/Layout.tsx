@@ -3,14 +3,15 @@ import {Layout, Menu, Breadcrumb, Button, theme, Avatar, Dropdown, Space, Typogr
 import type {MenuProps} from 'antd';
 import {
     DashboardOutlined, CloudServerOutlined, DeploymentUnitOutlined, DatabaseOutlined, InteractionOutlined, UserOutlined, SettingOutlined,
-    MenuFoldOutlined, MenuUnfoldOutlined, DownOutlined, LogoutOutlined, IdcardOutlined, CloudOutlined, ApiOutlined, BellOutlined, CalendarOutlined, ThunderboltOutlined //clo는 쿠버네티스
+    MenuFoldOutlined, MenuUnfoldOutlined, DownOutlined, LogoutOutlined, IdcardOutlined, CloudOutlined, ApiOutlined, BellOutlined, CalendarOutlined, ThunderboltOutlined, //clo는 쿠버네티스
+    FundOutlined, NodeIndexOutlined, SolutionOutlined // VllmObservability / Trace / UserTrace 추가
 } from '@ant-design/icons';
 import {Outlet, useLocation, useNavigate} from 'react-router-dom';
 import {TERMINALS} from '../config/terminals';
 import {formatKstDate, formatKstShortDate} from '../utils/time';
 
 const {Header, Sider, Content} = Layout;
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const NOTIFICATION_LIMIT = 5;
 const NOTIFICATION_POLL_INTERVAL_MS = 30_000;
 
@@ -48,14 +49,17 @@ export default function Admin() {
         //     label: t.name,
         // }));
         return [
-            {key: '/ops/dashboard', icon: <DashboardOutlined/>, label: 'Dashboard'},
-            {key: '/ops/node', icon: <CloudServerOutlined/>, label: 'Node'},
-            {key: '/ops/job', icon: <DeploymentUnitOutlined />, label: 'Job'},
-            {key: '/ops/gpu', icon: <DatabaseOutlined />, label: 'GPU'},
-            {key: '/ops/power', icon: <InteractionOutlined />, label: 'Power'},
-            {key: '/ops/k8s', icon: <CloudOutlined />, label: 'Kubernetes'}, //쿠버네티스 추가
-            {key: '/ops/snmp', icon: <ApiOutlined />, label: 'SNMP'}, //snmp추가
             {key: '/ops/vllm', icon: <ThunderboltOutlined />, label: 'vLLM'}, //vLLM 추가
+            {key: '/ops/vllm-observability', icon: <FundOutlined />, label: 'VllmObservability'}, //추가
+            {key: '/ops/trace', icon: <NodeIndexOutlined />, label: 'Trace'}, //추가
+            {key: '/ops/user-trace', icon: <SolutionOutlined />, label: 'UserTrace'}, //추가
+            {key: '/ops/k8s', icon: <CloudOutlined />, label: 'Kubernetes'}, //쿠버네티스 추가
+            {key: '/ops/gpu', icon: <DatabaseOutlined />, label: 'GPU'},
+            {key: '/ops/dashboard', icon: <DashboardOutlined/>, label: 'Dashboard'},
+            {key: '/ops/server', icon: <CloudServerOutlined/>, label: 'Server'},
+            {key: '/ops/job', icon: <DeploymentUnitOutlined />, label: 'Job'},
+            {key: '/ops/power', icon: <InteractionOutlined />, label: 'Power'},
+            {key: '/ops/network', icon: <ApiOutlined />, label: 'Network'}, //network(구 snmp)
             // {
             //     key: 'terminal', label: '터미널', icon: <CodeOutlined/>, children: terminalChildren,
             // },
@@ -67,14 +71,17 @@ export default function Admin() {
         const parts = pathname.split('/').filter(Boolean);
         if (parts[0] !== 'ops') return '/ops/dashboard';
         if (parts[1] === 'dashboard') return '/ops/dashboard';
-        if (parts[1] === 'node') return '/ops/node';
+        if (parts[1] === 'server') return '/ops/server';
         if (parts[1] === 'job') return '/ops/job';
         if (parts[1] === 'gpu') return '/ops/gpu';
         if (parts[1] === 'power') return '/ops/power';
         if (parts[1] === 'terminal' && parts[2]) return `/ops/terminal/${parts[2]}`;
         if (parts[1] === 'k8s') return '/ops/k8s';  // 쿠버네티스 추가
-        if (parts[1] === 'snmp') return '/ops/snmp'; // snmp추가
+        if (parts[1] === 'network') return '/ops/network'; // network(구 snmp)
         if (parts[1] === 'vllm') return '/ops/vllm'; // vLLM 추가
+        if (parts[1] === 'vllm-observability') return '/ops/vllm-observability'; // 추가
+        if (parts[1] === 'trace') return '/ops/trace'; // 추가
+        if (parts[1] === 'user-trace') return '/ops/user-trace'; // 추가
         if (parts[1] === 'settings') return '/ops/settings';
         if (parts[1]) return `/ops/${parts[1]}`;
         return '/ops/dashboard';
@@ -154,13 +161,16 @@ export default function Admin() {
         const items: { title: string }[] = [];
         // if (parts[0]) items.push({title: '대시보드'});
         if (parts[1] && parts[1] == "dashboard") items.push({title: 'Dashboard'});
-        if (parts[1] && parts[1] == "node") items.push({title: 'Node'});
+        if (parts[1] && parts[1] == "server") items.push({title: 'Server'});
         if (parts[1] && parts[1] == "job") items.push({title: 'Job'});
         if (parts[1] && parts[1] == "gpu") items.push({title: 'GPU'});
         if (parts[1] && parts[1] == "power") items.push({title: 'Power'});
         if (parts[1] && parts[1] == "k8s") items.push({title: 'Kubernetes'});  // 쿠버네티스 추가
-        if (parts[1] && parts[1] == "snmp") items.push({title: 'SNMP'}); //snmp 추가
+        if (parts[1] && parts[1] == "network") items.push({title: 'Network'}); //network(구 snmp)
         if (parts[1] && parts[1] == "vllm") items.push({title: 'vLLM'}); //vLLM 추가
+        if (parts[1] && parts[1] == "vllm-observability") items.push({title: 'VllmObservability'}); //추가
+        if (parts[1] && parts[1] == "trace") items.push({title: 'Trace'}); //추가
+        if (parts[1] && parts[1] == "user-trace") items.push({title: 'UserTrace'}); //추가
         if (parts[1] && parts[1] == "settings") items.push({title: '가입신청 관리'});
         if (parts[1] && parts[1] == "resource-reservations") items.push({title: '자원 예약 현황'});
 

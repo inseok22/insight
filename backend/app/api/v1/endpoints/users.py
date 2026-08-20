@@ -8,6 +8,7 @@ from app.dependencies.auth import AdminUserDep
 from app.models.user import ApprovalStatus
 from app.schemas.auth import MessageResponse
 from app.schemas.user import UserAdminRead, UserApprovalPatch, UserCreate, UserRead
+from app.services.lsc_sync import run_lsc_sync
 from app.services.user_service import approve_user, create_user, get_user_by_id, list_users, reject_user
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -38,7 +39,13 @@ def patch_user_approval(user_id: int, payload: UserApprovalPatch, current_admin:
     try:
         if payload.status == ApprovalStatus.APPROVED:
             approve_user(db, user_id=user_id, reviewed_by=current_admin.username)
-            return MessageResponse(message="신청이 승인 처리되었습니다. (Desk/OpenLDAP 수동 등록 완료)")
+            # 승인 직후 LSC(OpenLDAP) 동기화 즉시 실행. 실패해도 승인은 유지하고 경고만 반환.
+            sync = run_lsc_sync()
+            if sync.ok:
+                return MessageResponse(message="신청이 승인되고 LSC 동기화가 완료되었습니다.")
+            return MessageResponse(
+                message=f"신청은 승인되었으나 LSC 동기화에 실패했습니다. 수동 확인이 필요합니다. (사유: {sync.detail})"
+            )
         if payload.status == ApprovalStatus.REJECTED:
             reject_user(db, user_id=user_id)
             return MessageResponse(message="신청이 반려되어 삭제되었습니다.")

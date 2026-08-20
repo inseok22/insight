@@ -24,7 +24,7 @@ type LoginResponse = {
   };
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
@@ -60,7 +60,7 @@ export default function Login() {
       localStorage.setItem('user', JSON.stringify(result.user));
 
       messageApi.success('로그인되었습니다.');
-      navigate('/ops/dashboard', { replace: true });
+      navigate('/ops/vllm', { replace: true });
     } catch (error) {
       console.error(error);
       messageApi.error('서버 연결 중 오류가 발생했습니다.');
