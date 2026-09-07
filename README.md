@@ -1,4 +1,7 @@
 ﻿**1. 프로젝트 한 줄 요약**
+
+HPC/LLM 설정 전환과 현재 LLM 납품 절차는 [납품 프로필 가이드](docs/delivery-profiles.md)를 참고하세요. 기본 제품명은 **T-LLM Observability**입니다.
+
 TSlurm Insight 관리자 웹앱으로, 외부 모니터링 화면을 iframe으로 통합하고 Desk 회원가입 신청을 공개로 받아 관리자가 승인/거절하는 React + FastAPI + MariaDB 프로젝트입니다.
 
 **2. 프로젝트 목적과 기능**

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.dependencies.features import require_feature
 from app.db.session import get_admin_db
 from app.schemas.resource_reservation import TdResourceReservationResponse
 from app.services.resource_reservation_service import (
@@ -13,7 +14,7 @@ from app.services.resource_reservation_service import (
     receive_resource_reservation_request,
 )
 
-router = APIRouter(prefix="/external/td", tags=["external-td"])
+router = APIRouter(prefix="/external/td", tags=["external-td"], dependencies=[Depends(require_feature("resource_reservations"))])
 
 
 def verify_td_api_key(

@@ -1,10 +1,12 @@
+import { useFrontendConfig } from '../../config/product';
 // src/pages/sub_pages/UserTrace.tsx
 import { useEffect, useState, useRef } from 'react';
 import { Spin, Result, Button } from 'antd';
 
-const EXTERNAL_URL = import.meta.env.VITE_USER_TRACE_URL;
+
 
 export default function UserTrace() {
+    const EXTERNAL_URL = useFrontendConfig().dashboards["user_trace_url"] || undefined;
     const [loading, setLoading] = useState(true);
     const [loaded, setLoaded] = useState(false);
     const [shouldLoad, setShouldLoad] = useState(false);
@@ -35,6 +37,8 @@ export default function UserTrace() {
             }
         };
     }, []);
+
+    if (!EXTERNAL_URL) return <Result status="warning" title="관제 화면 주소가 설정되지 않았습니다." />;
 
     const height = 'calc(100dvh - 64px - 1px - 32px)';
 

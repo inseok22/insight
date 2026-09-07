@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,6 +13,9 @@ class Settings(BaseSettings):
     app_name: str = "TSlurmOps API"
     api_v1_prefix: str = "/api/v1"
     debug: bool = False
+    product_profile: Literal["hpc", "llm"] = "llm"
+    resource_reservations_enabled: bool = True
+    terminal_enabled: bool = True
 
     secret_key: str = "change-me-in-production"
     algorithm: str = "HS256"
@@ -59,6 +63,10 @@ class Settings(BaseSettings):
     power_url: str | None = None
     k8s_url: str | None = None
     snmp_url: str | None = None
+    vllm_url: str | None = None
+    vllm_observability_url: str | None = None
+    trace_url: str | None = None
+    user_trace_url: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,

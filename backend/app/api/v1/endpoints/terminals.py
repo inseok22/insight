@@ -1,9 +1,10 @@
 import json
 
-from fastapi import APIRouter, Query, WebSocket, status
+from fastapi import APIRouter, Depends, Query, WebSocket, status
 from fastapi.websockets import WebSocketDisconnect
 
 from app.core.config import get_settings
+from app.dependencies.features import require_feature
 from app.core.security import TokenError, decode_access_token
 from app.schemas.config import TerminalTargetResponse
 from app.services.terminal_service import PROMPT, handle_command, initial_banner
@@ -12,7 +13,7 @@ router = APIRouter(tags=["terminal"])
 settings = get_settings()
 
 
-@router.get("/terminals/targets", response_model=list[TerminalTargetResponse])
+@router.get("/terminals/targets", response_model=list[TerminalTargetResponse], dependencies=[Depends(require_feature("terminal"))])
 def read_terminal_targets() -> list[TerminalTargetResponse]:
     return [
         TerminalTargetResponse(
@@ -20,7 +21,7 @@ def read_terminal_targets() -> list[TerminalTargetResponse]:
             name=key.replace("-", " ").title(),
             ws_path=f"/api/v1/ws/term/{key}",
         )
-        for key in settings.terminal_targets
+        for key in settings.terminal_targets_list
     ]
 
 
@@ -30,7 +31,7 @@ async def terminal_websocket(
     target_key: str,
     token: str | None = Query(default=None),
 ) -> None:
-    if target_key not in settings.terminal_targets:
+    if not get_settings().terminal_enabled or target_key not in settings.terminal_targets_list:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 

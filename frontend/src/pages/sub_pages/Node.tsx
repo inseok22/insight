@@ -1,11 +1,13 @@
+import { useFrontendConfig } from '../../config/product';
 import { useEffect, useState } from 'react';
 import { Spin, Result, Button } from 'antd';
 
 // 환경변수로 관리하면 배포마다 URL 바꾸기 용이합니다.
 // .env 파일에 설정값 사용.
-const EXTERNAL_URL = import.meta.env.VITE_NODE_URL;
+
 
 export default function Node() {
+    const EXTERNAL_URL = useFrontendConfig().dashboards["node_url"] || undefined;
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
 
@@ -18,6 +20,8 @@ export default function Node() {
   }, [loaded]);
 
   // 헤더(64) + 헤더 하단 보더(1) + 콘텐츠 패딩(16*2) 반영
+    if (!EXTERNAL_URL) return <Result status="warning" title="관제 화면 주소가 설정되지 않았습니다." />;
+
   const height = 'calc(100dvh - 64px - 1px - 32px)';
 
   return (

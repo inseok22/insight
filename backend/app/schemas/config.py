@@ -1,3 +1,4 @@
+from typing import Literal
 from pydantic import BaseModel
 
 
@@ -14,6 +15,10 @@ class DashboardUrlsResponse(BaseModel):
     power_url: str | None = None
     k8s_url: str | None = None
     snmp_url: str | None = None
+    vllm_url: str | None = None
+    vllm_observability_url: str | None = None
+    trace_url: str | None = None
+    user_trace_url: str | None = None
 
 
 class TerminalTargetResponse(BaseModel):
@@ -22,6 +27,14 @@ class TerminalTargetResponse(BaseModel):
     ws_path: str
 
 
-class FrontendConfigResponse(BaseModel):
+class ProductConfigResponse(BaseModel):
+    profile: Literal["hpc", "llm"]
+    product_name: str
+    short_name: str
+    home_path: str
+    features: list[str]
+
+
+class FrontendConfigResponse(ProductConfigResponse):
     dashboards: DashboardUrlsResponse
     terminals: list[TerminalTargetResponse]

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
+import ProductProvider from './ProductProvider';
 
 type PrivateRouteProps = {
   children?: ReactNode;
@@ -12,5 +13,5 @@ export default function PrivateRoute({ children }: PrivateRouteProps) {
     return <Navigate to="/login" replace />;
   }
 
-  return children ? <>{children}</> : <Outlet />;
+  return <ProductProvider authenticated>{children ?? <Outlet />}</ProductProvider>;
 }
