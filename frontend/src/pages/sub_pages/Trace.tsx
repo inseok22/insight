@@ -1,12 +1,12 @@
 import { useFrontendConfig } from '../../config/product';
-// src/pages/sub_pages/Snmp.tsx
+// src/pages/sub_pages/Trace.tsx
 import { useEffect, useState, useRef } from 'react';
 import { Spin, Result, Button } from 'antd';
 
 
 
-export default function Snmp() {
-    const EXTERNAL_URL = useFrontendConfig().dashboards["snmp_url"] || undefined;
+export default function Trace() {
+    const EXTERNAL_URL = useFrontendConfig().dashboards["trace_url"] || undefined;
     const [loading, setLoading] = useState(true);
     const [loaded, setLoaded] = useState(false);
     const [shouldLoad, setShouldLoad] = useState(false);
@@ -54,7 +54,7 @@ export default function Snmp() {
                 <iframe
                     ref={iframeRef}
                     src={EXTERNAL_URL}
-                    title="SNMP"
+                    title="Trace"
                     style={{
                         width: '100%',
                         height: '100%',

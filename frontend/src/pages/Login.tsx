@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button, Form, Input, Typography, message } from 'antd';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useProduct } from '../config/product';
 
 type LoginFields = {
   username: string;
@@ -24,12 +25,13 @@ type LoginResponse = {
   };
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
+  const { product_name, home_path } = useProduct();
 
   const onFinish = async (values: LoginFields) => {
     try {
@@ -60,7 +62,7 @@ export default function Login() {
       localStorage.setItem('user', JSON.stringify(result.user));
 
       messageApi.success('로그인되었습니다.');
-      navigate('/ops/dashboard', { replace: true });
+      navigate(home_path, { replace: true });
     } catch (error) {
       console.error(error);
       messageApi.error('서버 연결 중 오류가 발생했습니다.');
@@ -74,7 +76,7 @@ export default function Login() {
         {contextHolder}
         <div className="auth-card">
           <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 8, color: 'rgb(18, 25, 35)' }}>
-            TSlurm Insight
+            {product_name}
           </Typography.Title>
 
           <Form<LoginFields>

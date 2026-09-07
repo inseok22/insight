@@ -2,15 +2,18 @@ import {useCallback, useMemo, useState, useEffect} from 'react';
 import {Layout, Menu, Breadcrumb, Button, theme, Avatar, Dropdown, Space, Typography, ConfigProvider, Badge, Empty, Popover, Spin} from 'antd';
 import type {MenuProps} from 'antd';
 import {
-    DashboardOutlined, CloudServerOutlined, DeploymentUnitOutlined, DatabaseOutlined, InteractionOutlined, UserOutlined, SettingOutlined,
-    MenuFoldOutlined, MenuUnfoldOutlined, DownOutlined, LogoutOutlined, IdcardOutlined, CloudOutlined, ApiOutlined, BellOutlined, CalendarOutlined, ThunderboltOutlined //clo는 쿠버네티스
+    UserOutlined, SettingOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
+    DownOutlined, LogoutOutlined, IdcardOutlined, BellOutlined, CalendarOutlined, RobotOutlined,
 } from '@ant-design/icons';
+import { monitoringPages } from '../config/monitoring';
+import { useProduct } from '../config/product';
 import {Outlet, useLocation, useNavigate} from 'react-router-dom';
 import {TERMINALS} from '../config/terminals';
 import {formatKstDate, formatKstShortDate} from '../utils/time';
 
 const {Header, Sider, Content} = Layout;
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const NOTIFICATION_LIMIT = 5;
 const NOTIFICATION_POLL_INTERVAL_MS = 30_000;
 
@@ -31,8 +34,9 @@ function getApplicantName(user: PendingUserNotification) {
 }
 
 export default function Admin() {
+    const { features, product_name, short_name, home_path } = useProduct();
     const [collapsed, setCollapsed] = useState(false);
-    const [openKeys, setOpenKeys] = useState<string[]>([]);
+    const [openKeys, setOpenKeys] = useState<string[]>(['llm']); // LLM 그룹 기본 펼침
     const [notificationOpen, setNotificationOpen] = useState(false);
     const [notificationLoading, setNotificationLoading] = useState(false);
     const [pendingNotifications, setPendingNotifications] = useState<PendingUserNotification[]>([]);
@@ -40,51 +44,43 @@ export default function Admin() {
     const navigate = useNavigate();
     const {pathname} = useLocation();
 
-    // 메뉴 구성(터미널 하위는 동적으로)
     const menuItems: MenuProps['items'] = useMemo(() => {
-        // const terminalChildren = TERMINALS.map((t) => ({
-        //     key: `/dashboard/terminal/${t.key}`,
-        //     icon: <CodeOutlined/>,
-        //     label: t.name,
-        // }));
+        const enabled = monitoringPages.filter(page => features.includes(page.feature));
+        const item = (page: typeof monitoringPages[number]) => ({
+            key: `/ops/${page.path}`, label: page.label, icon: <page.icon />,
+        });
+        const llm = enabled.filter(page => page.group === 'llm');
         return [
-            {key: '/ops/dashboard', icon: <DashboardOutlined/>, label: 'Dashboard'},
-            {key: '/ops/node', icon: <CloudServerOutlined/>, label: 'Node'},
-            {key: '/ops/job', icon: <DeploymentUnitOutlined />, label: 'Job'},
-            {key: '/ops/gpu', icon: <DatabaseOutlined />, label: 'GPU'},
-            {key: '/ops/power', icon: <InteractionOutlined />, label: 'Power'},
-            {key: '/ops/k8s', icon: <CloudOutlined />, label: 'Kubernetes'}, //쿠버네티스 추가
-            {key: '/ops/snmp', icon: <ApiOutlined />, label: 'SNMP'}, //snmp추가
-            {key: '/ops/vllm', icon: <ThunderboltOutlined />, label: 'vLLM'}, //vLLM 추가
-            // {
-            //     key: 'terminal', label: '터미널', icon: <CodeOutlined/>, children: terminalChildren,
-            // },
+            ...(llm.length ? [{ key: 'llm', label: 'LLM', icon: <RobotOutlined />, children: llm.map(item) }] : []),
+            ...enabled.filter(page => page.group !== 'llm').map(item),
         ];
-    }, []);
+    }, [features]);
 
     // 선택된 메뉴 키 계산 및 선택된 표시 처리
     const selectedKey = useMemo(() => {
         const parts = pathname.split('/').filter(Boolean);
-        if (parts[0] !== 'ops') return '/ops/dashboard';
+        if (parts[0] !== 'ops') return home_path;
         if (parts[1] === 'dashboard') return '/ops/dashboard';
-        if (parts[1] === 'node') return '/ops/node';
+        if (parts[1] === 'server') return '/ops/server';
         if (parts[1] === 'job') return '/ops/job';
         if (parts[1] === 'gpu') return '/ops/gpu';
         if (parts[1] === 'power') return '/ops/power';
         if (parts[1] === 'terminal' && parts[2]) return `/ops/terminal/${parts[2]}`;
         if (parts[1] === 'k8s') return '/ops/k8s';  // 쿠버네티스 추가
-        if (parts[1] === 'snmp') return '/ops/snmp'; // snmp추가
+        if (parts[1] === 'network') return '/ops/network'; // network(구 snmp)
         if (parts[1] === 'vllm') return '/ops/vllm'; // vLLM 추가
+        if (parts[1] === 'vllm-observability') return '/ops/vllm-observability'; // 추가
+        if (parts[1] === 'trace') return '/ops/trace'; // 추가
+        if (parts[1] === 'user-trace') return '/ops/user-trace'; // 추가
         if (parts[1] === 'settings') return '/ops/settings';
         if (parts[1]) return `/ops/${parts[1]}`;
-        return '/ops/dashboard';
-    }, [pathname]);
+        return home_path;
+    }, [pathname, home_path]);
 
-    // 터미널 경로일 때 서브메뉴 자동 열림
+    // 터미널 경로일 때 서브메뉴 자동 열림 (LLM 그룹은 사용자가 접기 전까지 펼침 유지)
     useEffect(() => {
         if (collapsed) return; // 접힘 상태에서는 열림 상태 무의미
         if (pathname.startsWith('/ops/terminal')) setOpenKeys(['terminal']);
-        else setOpenKeys([]);
     }, [pathname, collapsed]);
 
     const loadPendingNotifications = useCallback(async (silent = false) => {
@@ -142,10 +138,8 @@ export default function Admin() {
     };
 
     const onOpenChange: MenuProps['onOpenChange'] = (keys) => {
-        // 한 번에 하나의 루트만 열리게 제어
-        const rootKeys = ['terminal'];
-        const latest = keys.find((k) => !openKeys.includes(k));
-        setOpenKeys(latest && rootKeys.includes(latest) ? [latest] : []);
+        // LLM 등 그룹 메뉴를 자유롭게 펼치고 접을 수 있게 antd에 그대로 위임
+        setOpenKeys(keys as string[]);
     };
 
     // Breadcrumb
@@ -154,13 +148,16 @@ export default function Admin() {
         const items: { title: string }[] = [];
         // if (parts[0]) items.push({title: '대시보드'});
         if (parts[1] && parts[1] == "dashboard") items.push({title: 'Dashboard'});
-        if (parts[1] && parts[1] == "node") items.push({title: 'Node'});
+        if (parts[1] && parts[1] == "server") items.push({title: 'Server'});
         if (parts[1] && parts[1] == "job") items.push({title: 'Job'});
         if (parts[1] && parts[1] == "gpu") items.push({title: 'GPU'});
         if (parts[1] && parts[1] == "power") items.push({title: 'Power'});
         if (parts[1] && parts[1] == "k8s") items.push({title: 'Kubernetes'});  // 쿠버네티스 추가
-        if (parts[1] && parts[1] == "snmp") items.push({title: 'SNMP'}); //snmp 추가
-        if (parts[1] && parts[1] == "vllm") items.push({title: 'vLLM'}); //vLLM 추가
+        if (parts[1] && parts[1] == "network") items.push({title: 'Network'}); //network(구 snmp)
+        if (parts[1] && parts[1] == "vllm") items.push({title: 'LLM'}, {title: 'Dashboard'}); // 구 vLLM
+        if (parts[1] && parts[1] == "vllm-observability") items.push({title: 'LLM'}, {title: 'Observability'}); // 구 VllmObservability
+        if (parts[1] && parts[1] == "trace") items.push({title: 'LLM'}, {title: 'Time Trace'}); // 구 Trace
+        if (parts[1] && parts[1] == "user-trace") items.push({title: 'LLM'}, {title: 'User Trace'}); // 구 UserTrace
         if (parts[1] && parts[1] == "settings") items.push({title: '가입신청 관리'});
         if (parts[1] && parts[1] == "resource-reservations") items.push({title: '자원 예약 현황'});
 
@@ -181,7 +178,7 @@ export default function Admin() {
     const userMenuItems: MenuProps['items'] = [
         {key: 'profile', icon: <IdcardOutlined/>, label: '내 정보', disabled: true},
         {key: 'settings', icon: <SettingOutlined/>, label: '가입신청 관리'},
-        {key: 'resource-reservations', icon: <CalendarOutlined/>, label: '자원 예약 현황'},
+        ...(features.includes('resource_reservations') ? [{key: 'resource-reservations', icon: <CalendarOutlined/>, label: '자원 예약 현황'}] : []),
         {key: 'logout', icon: <LogoutOutlined/>, label: '로그아웃', danger: true},
     ];
     const onUserMenuClick: MenuProps['onClick'] = ({key}) => {
@@ -256,7 +253,7 @@ export default function Admin() {
                 collapsible
                 collapsed={collapsed}
                 trigger={null}
-                width={220}
+                width={248}
                 className="app-sider-dark"
                 style={{
                     background: '#121923',   // 슬라이더 배경
@@ -285,17 +282,17 @@ export default function Admin() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: collapsed ? 'center' : 'flex-start',
-                            padding: collapsed ? '0 22px' : '0 26px',
+                            padding: collapsed ? '0 8px' : '0 16px',
                             width: '100%',
                             fontWeight: 700,
-                            fontSize: 20,
+                            fontSize: collapsed ? 16 : 19,
                             color: '#fff',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                         }}
                     >
-                        {collapsed ? 'TSlurm' : 'TSlurm Insight'}
+                        {collapsed ? short_name : product_name}
                     </div>
 
                     {/* 메뉴 */}

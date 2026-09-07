@@ -20,7 +20,7 @@ type RegisterFields = {
 // 그룹 목록 (현재는 tslurm만, gidNumber 변환은 백엔드 담당)
 const groupOptions = [{ value: 'tslurm', label: 'tslurm' }];
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const months = Array.from({ length: 12 }, (_, i) => ({
     value: String(i + 1).padStart(2, '0'),

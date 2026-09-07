@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,6 +13,9 @@ class Settings(BaseSettings):
     app_name: str = "TSlurmOps API"
     api_v1_prefix: str = "/api/v1"
     debug: bool = False
+    product_profile: Literal["hpc", "llm"] = "llm"
+    resource_reservations_enabled: bool = True
+    terminal_enabled: bool = True
 
     secret_key: str = "change-me-in-production"
     algorithm: str = "HS256"
@@ -40,6 +44,18 @@ class Settings(BaseSettings):
     initial_admin_password: str = "admin"
     initial_admin_name: str = "Administrator"
 
+    # LSC(OpenLDAP 동기화) 원격 실행 설정 — 승인 시 SSH로 스크립트 실행
+    lsc_sync_enabled: bool = Field(default=True, validation_alias="LSC_SYNC_ENABLED")
+    lsc_ssh_host: str = Field(default="192.168.0.125", validation_alias="LSC_SSH_HOST")
+    lsc_ssh_port: int = Field(default=10022, validation_alias="LSC_SSH_PORT")
+    lsc_ssh_user: str = Field(default="root", validation_alias="LSC_SSH_USER")
+    lsc_ssh_key_path: str | None = Field(default=None, validation_alias="LSC_SSH_KEY_PATH")
+    lsc_ssh_timeout: int = Field(default=120, validation_alias="LSC_SSH_TIMEOUT")
+    lsc_sync_command: str = Field(
+        default="/usr/local/bin/lsc-sync-now.sh && /usr/local/bin/make_home.sh",
+        validation_alias="LSC_SYNC_COMMAND",
+    )
+
     overview_url: str | None = None
     node_url: str | None = None
     job_url: str | None = None
@@ -47,6 +63,10 @@ class Settings(BaseSettings):
     power_url: str | None = None
     k8s_url: str | None = None
     snmp_url: str | None = None
+    vllm_url: str | None = None
+    vllm_observability_url: str | None = None
+    trace_url: str | None = None
+    user_trace_url: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,

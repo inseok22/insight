@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_admin_db
+from app.dependencies.features import require_feature
 from app.dependencies.auth import AdminUserDep
 from app.schemas.resource_reservation import (
     ResourceReservationActionResponse,
@@ -21,7 +22,7 @@ from app.services.resource_reservation_service import (
     retry_slurm_reservation_request,
 )
 
-router = APIRouter(prefix="/admin/resource", tags=["admin-resource"])
+router = APIRouter(prefix="/admin/resource", tags=["admin-resource"], dependencies=[Depends(require_feature("resource_reservations"))])
 AdminDbDep = Annotated[Session, Depends(get_admin_db)]
 
 
