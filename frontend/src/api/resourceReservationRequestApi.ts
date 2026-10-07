@@ -83,18 +83,11 @@ function getAuthHeader(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export function isUsingDummyReservationRequests() {
-  return import.meta.env.VITE_USE_DUMMY_RESERVATION_REQUESTS === 'true';
-}
-
 export async function fetchResourceReservationRequests(): Promise<ResourceReservationRequestListResponse> {
-  const useDummy = isUsingDummyReservationRequests();
-  const url = useDummy
-    ? `/mocks/resource-reservation-requests.dummy.json?t=${Date.now()}`
-    : `${API_BASE_URL}/api/admin/resource/reservation-requests`;
+  const url = `${API_BASE_URL}/api/admin/resource/reservation-requests`;
 
   const response = await fetch(url, {
-    headers: useDummy ? undefined : { ...getAuthHeader() },
+    headers: getAuthHeader(),
   });
 
   if (!response.ok) {

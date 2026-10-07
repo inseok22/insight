@@ -23,16 +23,6 @@ class SlurmReservationQueryResult:
 
 def create_or_update_slurm_reservation(payload: dict[str, object]) -> SlurmReservationResult:
     settings = get_settings()
-    if settings.slurm_reservation_mock:
-        return SlurmReservationResult(
-            success=True,
-            response_json={
-                "mock": True,
-                "result": "success",
-                "message": "Mock Slurm reservation created",
-            },
-        )
-
     if not settings.slurm_rest_user_name or not settings.slurm_rest_user_token:
         return SlurmReservationResult(success=False, error="Slurm REST user name/token is not configured.")
 
@@ -70,10 +60,6 @@ def create_or_update_slurm_reservation(payload: dict[str, object]) -> SlurmReser
 
 def list_slurm_reservations() -> SlurmReservationQueryResult:
     settings = get_settings()
-    if settings.slurm_reservation_mock:
-        # Mock 모드에서는 실제 Slurm을 조회하지 않고 빈 목록을 반환한다.
-        return SlurmReservationQueryResult(success=True, reservations=[])
-
     if not settings.slurm_rest_user_name or not settings.slurm_rest_user_token:
         return SlurmReservationQueryResult(
             success=False, reservations=[], error="Slurm REST user name/token is not configured."

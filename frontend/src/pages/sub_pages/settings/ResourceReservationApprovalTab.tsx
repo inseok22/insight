@@ -20,11 +20,9 @@ import type { ColumnsType } from 'antd/es/table';
 import {
   approveResourceReservationRequest,
   fetchResourceReservationRequests,
-  isUsingDummyReservationRequests,
   rejectResourceReservationRequest,
   retrySlurmReservationRequest,
   type PartitionType,
-  type ReservationAuditLog,
   type ReservationRequestStatus,
   type ResourceReservationRequest,
   type ValidationStatus,
@@ -100,12 +98,7 @@ function formatRequestedResource(record: ResourceReservationRequest) {
   return '-';
 }
 
-function createAuditLog(action: string, actor: string, message: string, createdAt: string): ReservationAuditLog {
-  return { action, actor, message, createdAt };
-}
-
 export default function ResourceReservationApprovalTab() {
-  const useDummy = isUsingDummyReservationRequests();
   const { modal, message: messageApi } = App.useApp();
   const [rows, setRows] = useState<ResourceReservationRequest[]>([]);
   const [loading, setLoading] = useState(false);
@@ -178,13 +171,6 @@ export default function ResourceReservationApprovalTab() {
     setSearchText('');
   };
 
-  const updateRequest = (
-    requestId: string,
-    updater: (request: ResourceReservationRequest) => ResourceReservationRequest,
-  ) => {
-    setRows((prevRows) => prevRows.map((row) => (row.id === requestId ? updater(row) : row)));
-  };
-
   const runAction = async (requestId: string, actionType: ActionType, action: () => Promise<void>) => {
     const key = `${actionType}:${requestId}`;
     try {
@@ -212,80 +198,26 @@ export default function ResourceReservationApprovalTab() {
       ),
       okText: '승인',
       cancelText: '취소',
-      onOk: async () => {
-        if (!useDummy) {
-          await runAction(record.id, 'approve', async () => {
-            const result = await approveResourceReservationRequest(record.id);
-            if (result.success) {
-              messageApi.success(result.message);
-            } else {
-              messageApi.error(result.slurmError || result.message);
-            }
-            await loadRequests();
-          });
-          return;
+      onOk: () => runAction(record.id, 'approve', async () => {
+        const result = await approveResourceReservationRequest(record.id);
+        if (result.success) {
+          messageApi.success(result.message);
+        } else {
+          messageApi.error(result.slurmError || result.message);
         }
-
-        const approvedAt = new Date().toISOString();
-
-        // Slurm에는 별도 승인/거절 API가 없습니다. 실제 연동 시 프론트는 Insight 승인 API만 호출하고,
-        // 백엔드가 POST /slurm/v0.0.44/reservation 으로 Slurm 예약 생성을 수행합니다.
-        updateRequest(record.id, (request) => ({
-          ...request,
-          status: 'APPLYING_TO_SLURM',
-          approvedBy: 'admin',
-          approvedAt,
-          updatedAt: approvedAt,
-          auditLogs: [
-            ...request.auditLogs,
-            createAuditLog('APPROVED', 'admin', '관리자가 예약 요청을 승인했습니다.', approvedAt),
-          ],
-        }));
-
-        window.setTimeout(() => {
-          const reservedAt = new Date().toISOString();
-          updateRequest(record.id, (request) => ({
-            ...request,
-            status: 'SLURM_RESERVED',
-            slurmReservationName: request.slurmReservationName || `insight-rsv-${request.id}`,
-            slurmError: null,
-            updatedAt: reservedAt,
-            auditLogs: [
-              ...request.auditLogs,
-              createAuditLog('SLURM_RESERVED', 'Insight', 'Slurm 예약 생성이 완료되었습니다.', reservedAt),
-            ],
-          }));
-        }, 650);
-      },
+        await loadRequests();
+      }),
     });
   };
 
   const rejectRequest = (record: ResourceReservationRequest) => {
     const reason = window.prompt('거절 사유를 입력하세요.');
     if (!reason?.trim()) return;
-
-    if (!useDummy) {
-      void runAction(record.id, 'reject', async () => {
-        const result = await rejectResourceReservationRequest(record.id, reason.trim());
-        messageApi.success(result.message);
-        await loadRequests();
-      });
-      return;
-    }
-
-    const rejectedAt = new Date().toISOString();
-    updateRequest(record.id, (request) => ({
-      ...request,
-      status: 'REJECTED',
-      rejectionReason: reason.trim(),
-      rejectedBy: 'admin',
-      rejectedAt,
-      updatedAt: rejectedAt,
-      auditLogs: [
-        ...request.auditLogs,
-        createAuditLog('REJECTED', 'admin', '관리자가 예약 요청을 거절했습니다.', rejectedAt),
-      ],
-    }));
+    void runAction(record.id, 'reject', async () => {
+      const result = await rejectResourceReservationRequest(record.id, reason.trim());
+      messageApi.success(result.message);
+      await loadRequests();
+    });
   };
 
   const retrySlurm = (record: ResourceReservationRequest) => {
@@ -298,46 +230,15 @@ export default function ResourceReservationApprovalTab() {
       ),
       okText: '재시도',
       cancelText: '취소',
-      onOk: async () => {
-        if (!useDummy) {
-          await runAction(record.id, 'retry', async () => {
-            const result = await retrySlurmReservationRequest(record.id);
-            if (result.success) {
-              messageApi.success(result.message);
-            } else {
-              messageApi.error(result.slurmError || result.message);
-            }
-            await loadRequests();
-          });
-          return;
+      onOk: () => runAction(record.id, 'retry', async () => {
+        const result = await retrySlurmReservationRequest(record.id);
+        if (result.success) {
+          messageApi.success(result.message);
+        } else {
+          messageApi.error(result.slurmError || result.message);
         }
-
-        const retriedAt = new Date().toISOString();
-        updateRequest(record.id, (request) => ({
-          ...request,
-          status: 'APPLYING_TO_SLURM',
-          updatedAt: retriedAt,
-          auditLogs: [
-            ...request.auditLogs,
-            createAuditLog('RETRY_SLURM', 'admin', '관리자가 Slurm 예약 생성을 다시 시도했습니다.', retriedAt),
-          ],
-        }));
-
-        window.setTimeout(() => {
-          const reservedAt = new Date().toISOString();
-          updateRequest(record.id, (request) => ({
-            ...request,
-            status: 'SLURM_RESERVED',
-            slurmReservationName: request.slurmReservationName || `insight-rsv-${request.id}`,
-            slurmError: null,
-            updatedAt: reservedAt,
-            auditLogs: [
-              ...request.auditLogs,
-              createAuditLog('SLURM_RESERVED', 'Insight', 'Slurm 예약 생성이 완료되었습니다.', reservedAt),
-            ],
-          }));
-        }, 650);
-      },
+        await loadRequests();
+      }),
     });
   };
 
@@ -486,9 +387,6 @@ export default function ResourceReservationApprovalTab() {
           <Typography.Text type="secondary">
             마지막 조회: {formatKstDateTime(lastFetchedAt, { seconds: true })}
           </Typography.Text>
-          <Tag color={useDummy ? 'gold' : 'green'}>
-            {useDummy ? '더미 데이터 사용 중' : 'Backend API 사용 중'}
-          </Tag>
           <Button
             loading={loading}
             onClick={() => { void loadRequests(); }}

@@ -1,0 +1,59 @@
+.target-dashboard {
+  height: min(calc(100dvh - 118px), calc(90vh - 22px));
+  min-height: 240px;
+  min-width: 0;
+}
+
+.target-dashboard-tabs,
+.target-dashboard-frame {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.target-dashboard-tabs > .ant-tabs-nav {
+  flex: none;
+  margin-bottom: 10px;
+}
+
+.target-dashboard-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.target-dashboard-tabs > .ant-tabs-content-holder {
+  flex: 1;
+  min-height: 0;
+}
+
+.target-dashboard-tabs > .ant-tabs-content-holder > .ant-tabs-content,
+.target-dashboard-tabs .ant-tabs-tabpane-active {
+  height: 100%;
+}
+
+.target-dashboard-viewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.target-dashboard-viewport iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 6px;
+}
+
+.target-dashboard-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+}

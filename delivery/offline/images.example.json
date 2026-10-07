@@ -1,0 +1,11 @@
+{
+  "platform": "linux/amd64",
+  "images": {
+    "web": "insight-web:offline-1",
+    "backend": "insight-backend:offline-1",
+    "mariadb": "mariadb:11.4.5",
+    "grafana": "grafana/grafana:12.1.1",
+    "prometheus": "prom/prometheus:v3.5.0",
+    "dcgm": "REPLACE_WITH_DRIVER_COMPATIBLE_DCGM_EXPORTER_IMAGE"
+  }
+}

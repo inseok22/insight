@@ -86,7 +86,6 @@ def list_resource_reservation_requests(db: Session) -> ResourceReservationReques
 def list_resource_reservations(db: Session) -> SlurmReservationListResponse:
     """실제 Slurm(GET /reservations)에 등록된 예약을 조회하고 Insight DB와 교차해 반환한다.
 
-    MOCK 모드면 Slurm을 호출하지 않고 빈 목록을 반환한다(slurm_service에서 처리).
     조회 실패 시 RuntimeError를 던져 호출부(엔드포인트)가 502로 변환한다.
     """
     result = list_slurm_reservations()

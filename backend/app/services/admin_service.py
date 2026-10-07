@@ -29,7 +29,7 @@ def ensure_initial_admin(db: Session) -> None:
 
     admin = Admin(
         username=settings.initial_admin_username,
-        password_hash=hash_password(settings.initial_admin_password),
+        password_hash=settings.initial_admin_password_hash or hash_password(settings.initial_admin_password),
         full_name=settings.initial_admin_name,
         is_active=True,
     )

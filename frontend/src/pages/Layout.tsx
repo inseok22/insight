@@ -2,11 +2,12 @@ import {useCallback, useMemo, useState, useEffect} from 'react';
 import {Layout, Menu, Breadcrumb, Button, theme, Avatar, Dropdown, Space, Typography, ConfigProvider, Badge, Empty, Popover, Spin} from 'antd';
 import type {MenuProps} from 'antd';
 import {
-    UserOutlined, SettingOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
+    UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
     DownOutlined, LogoutOutlined, IdcardOutlined, BellOutlined, CalendarOutlined, RobotOutlined,
 } from '@ant-design/icons';
 import { monitoringPages } from '../config/monitoring';
-import { useProduct } from '../config/product';
+import { useProduct, useFrontendConfig } from '../config/product';
+import { dashboardGroups, dashboardMenuPath, dashboardSelection, hasServerMenu } from '../config/dashboardNavigation';
 import {Outlet, useLocation, useNavigate} from 'react-router-dom';
 import {TERMINALS} from '../config/terminals';
 import {formatKstDate, formatKstShortDate} from '../utils/time';
@@ -35,6 +36,9 @@ function getApplicantName(user: PendingUserNotification) {
 
 export default function Admin() {
     const { features, product_name, short_name, home_path } = useProduct();
+    // EICN 납품: 가입자 승인 및 알림 비활성화.
+    const userApprovalEnabled = false;
+    const frontendConfig = useFrontendConfig();
     const [collapsed, setCollapsed] = useState(false);
     const [openKeys, setOpenKeys] = useState<string[]>(['llm']); // LLM 그룹 기본 펼침
     const [notificationOpen, setNotificationOpen] = useState(false);
@@ -42,28 +46,37 @@ export default function Admin() {
     const [pendingNotifications, setPendingNotifications] = useState<PendingUserNotification[]>([]);
     const {token} = theme.useToken();
     const navigate = useNavigate();
-    const {pathname} = useLocation();
+    const {pathname, search} = useLocation();
 
     const menuItems: MenuProps['items'] = useMemo(() => {
         const enabled = monitoringPages.filter(page => features.includes(page.feature));
         const item = (page: typeof monitoringPages[number]) => ({
             key: `/ops/${page.path}`, label: page.label, icon: <page.icon />,
+            ...(hasServerMenu(frontendConfig, page.path) ? {
+                children: dashboardGroups(frontendConfig, page.path === 'gpu' ? 'gpu_url' : page.path === 'server' ? 'node_url' : 'vllm_url')
+                    .map(group => ({ key: dashboardMenuPath(page.path, group), label: group.name })),
+            } : {}),
         });
         const llm = enabled.filter(page => page.group === 'llm');
         return [
             ...(llm.length ? [{ key: 'llm', label: 'LLM', icon: <RobotOutlined />, children: llm.map(item) }] : []),
             ...enabled.filter(page => page.group !== 'llm').map(item),
         ];
-    }, [features]);
+    }, [features, frontendConfig]);
 
     // 선택된 메뉴 키 계산 및 선택된 표시 처리
     const selectedKey = useMemo(() => {
         const parts = pathname.split('/').filter(Boolean);
         if (parts[0] !== 'ops') return home_path;
         if (parts[1] === 'dashboard') return '/ops/dashboard';
-        if (parts[1] === 'server') return '/ops/server';
+        if (hasServerMenu(frontendConfig, parts[1])) {
+            const { group } = dashboardSelection(
+                dashboardGroups(frontendConfig, parts[1] === 'gpu' ? 'gpu_url' : parts[1] === 'server' ? 'node_url' : 'vllm_url'),
+                new URLSearchParams(search),
+            );
+            return dashboardMenuPath(parts[1], group);
+        }
         if (parts[1] === 'job') return '/ops/job';
-        if (parts[1] === 'gpu') return '/ops/gpu';
         if (parts[1] === 'power') return '/ops/power';
         if (parts[1] === 'terminal' && parts[2]) return `/ops/terminal/${parts[2]}`;
         if (parts[1] === 'k8s') return '/ops/k8s';  // 쿠버네티스 추가
@@ -75,13 +88,19 @@ export default function Admin() {
         if (parts[1] === 'settings') return '/ops/settings';
         if (parts[1]) return `/ops/${parts[1]}`;
         return home_path;
-    }, [pathname, home_path]);
+    }, [pathname, search, home_path, frontendConfig]);
 
     // 터미널 경로일 때 서브메뉴 자동 열림 (LLM 그룹은 사용자가 접기 전까지 펼침 유지)
     useEffect(() => {
         if (collapsed) return; // 접힘 상태에서는 열림 상태 무의미
-        if (pathname.startsWith('/ops/terminal')) setOpenKeys(['terminal']);
-    }, [pathname, collapsed]);
+        const section = pathname.split('/')[2];
+        const keys = [
+            ...(hasServerMenu(frontendConfig, section) ? [`/ops/${section}`] : []),
+            ...(section === 'terminal' ? ['terminal'] : []),
+            ...(monitoringPages.some(page => page.path === section && page.group === 'llm') ? ['llm'] : []),
+        ];
+        if (keys.length) setOpenKeys(current => [...new Set([...current, ...keys])]);
+    }, [pathname, collapsed, frontendConfig]);
 
     const loadPendingNotifications = useCallback(async (silent = false) => {
         if (!silent) setNotificationLoading(true);
@@ -117,6 +136,7 @@ export default function Admin() {
     }, []);
 
     useEffect(() => {
+        if (!userApprovalEnabled) return;
         void loadPendingNotifications();
 
         const intervalId = window.setInterval(() => {
@@ -126,7 +146,7 @@ export default function Admin() {
         return () => {
             window.clearInterval(intervalId);
         };
-    }, [loadPendingNotifications]);
+    }, [loadPendingNotifications, userApprovalEnabled]);
 
     const onMenuClick: MenuProps['onClick'] = (e) => {
         if (e.keyPath.includes('terminal')) {
@@ -169,15 +189,22 @@ export default function Admin() {
                 items.push({title: t?.name ?? parts[2]});
             }
         }
+        if (parts[1] === 'gpu' || parts[1] === 'server' || parts[1] === 'vllm') {
+            const field = parts[1] === 'gpu' ? 'gpu_url' : parts[1] === 'server' ? 'node_url' : 'vllm_url';
+            const { group, selected } = dashboardSelection(dashboardGroups(frontendConfig, field), new URLSearchParams(search));
+            if (group && hasServerMenu(frontendConfig, parts[1])) items.push({ title: group.name });
+            if (selected && (parts[1] === 'vllm' || (group?.targets.length ?? 0) > 1)) items.push({ title: selected.name });
+        }
         return items;
-    }, [pathname]);
+    }, [pathname, search, frontendConfig]);
 
     const userName = localStorage.getItem('userName') || 'Admin';
     const hasPendingNotifications = pendingNotifications.length > 0;
 
     const userMenuItems: MenuProps['items'] = [
         {key: 'profile', icon: <IdcardOutlined/>, label: '내 정보', disabled: true},
-        {key: 'settings', icon: <SettingOutlined/>, label: '가입신청 관리'},
+        // EICN 납품: 가입자 승인 메뉴 비활성화.
+        // {key: 'settings', icon: <SettingOutlined/>, label: '가입신청 관리'},
         ...(features.includes('resource_reservations') ? [{key: 'resource-reservations', icon: <CalendarOutlined/>, label: '자원 예약 현황'}] : []),
         {key: 'logout', icon: <LogoutOutlined/>, label: '로그아웃', danger: true},
     ];
@@ -327,7 +354,7 @@ export default function Admin() {
 
                     <div style={{marginLeft: 'auto'}}>
                         <Space size={4}>
-                            <Popover
+                            {userApprovalEnabled && <Popover
                                 trigger="click"
                                 placement="bottomRight"
                                 content={notificationContent}
@@ -343,7 +370,7 @@ export default function Admin() {
                                         <BellOutlined style={{fontSize: 18, color: token.colorText}}/>
                                     </Button>
                                 </Badge>
-                            </Popover>
+                            </Popover>}
 
                             <Dropdown trigger={['click']} placement="bottomRight"
                                       menu={{items: userMenuItems, onClick: onUserMenuClick}}>

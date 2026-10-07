@@ -35,7 +35,7 @@
         └── MariaDB  desk_users      ── users                           (가입신청)
 
   외부 연동: TD 시스템 ──POST──▶ /api/external/td/...   (자원예약 신청 수신)
-            Slurm    ◀──POST── slurm_service           (예약 생성, 기본 MOCK)
+            Slurm    ◀──POST── slurm_service           (실제 REST API로 예약 생성)
 ```
 
 ---
@@ -75,7 +75,7 @@ npm run dev                 # http://localhost:5173
 ```
 
 - 로그인: `admin` / 위에서 정한 비밀번호
-- iframe URL이나 자원예약 백엔드가 없으면 더미로 볼 수 있습니다: `VITE_USE_DUMMY_RESERVATIONS=true`, `VITE_USE_DUMMY_RESERVATION_REQUESTS=true`
+- 관제 URL이 없으면 미설정 안내를 표시합니다. 자원예약 화면은 실제 백엔드 API 연결이 필요합니다.
 
 ---
 
@@ -155,7 +155,7 @@ UserApprovalPage ─GET /api/v1/users?approval_status=pending─▶ 목록
    - 자원예약 거절 → **`REJECTED` 상태 + 사유 보존 + 감사 로그**
    - 헷갈리기 쉬우니 어느 기능을 만지는지 의식하세요.
 
-4. **Slurm은 기본 MOCK** — `SLURM_RESERVATION_MOCK=true`(기본)면 실제 Slurm을 호출하지 않고 성공으로 처리합니다([slurm_service.py](backend/app/services/slurm_service.py#L26)). 실연동하려면 `false` + `SLURM_REST_*` 설정 필요.
+4. **Slurm 실제 연동** — `SLURM_REST_*` 설정이 필요합니다. 연결 계정/토큰이 없으면 실패하며 예약 성공으로 처리하지 않습니다. 한국공항공사 구성에서는 예약 API 자체를 차단합니다.
 
 5. **인증 검증이 약함** — 프론트 [PrivateRoute](frontend/src/components/PrivateRoute.tsx)는 `localStorage.token` **존재 여부만** 확인하고 `/auth/me` 검증은 하지 않습니다.
 
@@ -218,7 +218,7 @@ cd deploy && docker compose config
 - [ ] 백엔드 `uvicorn` 기동, `/docs`에서 API 확인
 - [ ] 프론트 `npm run dev`, `admin`으로 로그인
 - [ ] `/register`로 가입 신청 → 관리자 화면에서 승인/거절 직접 해보기
-- [ ] (선택) `VITE_USE_DUMMY_RESERVATIONS=true`로 자원예약 화면 둘러보기
+- [ ] 한국공항공사 구성에서 자원예약 메뉴·직접 경로·API 차단 확인
 - [ ] 5번 "함정" 다시 정독
 - [ ] 작은 작업 하나로 첫 PR (lint/build/pytest 통과 확인)
 
