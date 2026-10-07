@@ -37,7 +37,8 @@ def issue_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: 
     return build_token_response(admin)
 
 
-@router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+# EICN 납품: 공개 가입신청 API 등록 비활성화.
+# @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, db: UserDbDep) -> UserRead:
     user_data = UserCreate(
         username=payload.username,

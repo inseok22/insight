@@ -1,9 +1,13 @@
 from functools import lru_cache
+import base64
+import binascii
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.core.dashboard_targets import parse_dashboard_targets
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 ENV_FILE = BASE_DIR / ".env"
@@ -14,6 +18,7 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     debug: bool = False
     product_profile: Literal["hpc", "llm"] = "llm"
+    monitoring_scope: Literal["profile", "gpu_llm", "kac"] = "profile"
     resource_reservations_enabled: bool = True
     terminal_enabled: bool = True
 
@@ -34,7 +39,6 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     terminal_targets: str = "master,node-a,node-b"
     td_api_key: str | None = Field(default=None, validation_alias="TD_API_KEY")
-    slurm_reservation_mock: bool = Field(default=True, validation_alias="SLURM_RESERVATION_MOCK")
     slurm_rest_base_url: str = Field(default="http://slurmrestd:6820", validation_alias="SLURM_REST_BASE_URL")
     slurm_rest_api_version: str = Field(default="v0.0.44", validation_alias="SLURM_REST_API_VERSION")
     slurm_rest_user_name: str | None = Field(default=None, validation_alias="SLURM_REST_USER_NAME")
@@ -42,6 +46,7 @@ class Settings(BaseSettings):
 
     initial_admin_username: str = "admin"
     initial_admin_password: str = "admin"
+    initial_admin_password_hash: str | None = None
     initial_admin_name: str = "Administrator"
 
     # LSC(OpenLDAP 동기화) 원격 실행 설정 — 승인 시 SSH로 스크립트 실행
@@ -73,7 +78,29 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        hide_input_in_errors=True,
     )
+
+    @field_validator("gpu_url", "node_url", "vllm_url")
+    @classmethod
+    def validate_dashboard_targets(cls, value: str | None, info: ValidationInfo) -> str | None:
+        is_kac = info.data.get("monitoring_scope") == "kac"
+        if is_kac and info.field_name in {"gpu_url", "node_url"} and value and value.strip().startswith("["):
+            raise ValueError("KAC GPU_URL/NODE_URL must each be one HTTP(S) URL or empty")
+        parse_dashboard_targets(value, "Dashboard", allow_empty_urls=is_kac and info.field_name == "vllm_url")
+        return value
+
+    @field_validator("initial_admin_password_hash")
+    @classmethod
+    def validate_initial_hash(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        try:
+            if value.startswith("{SSHA}") and len(base64.b64decode(value[6:], validate=True)) >= 28:
+                return value
+        except (ValueError, binascii.Error):
+            pass
+        raise ValueError("Expected a salted SSHA password hash")
 
     @field_validator("debug", mode="before")
     @classmethod

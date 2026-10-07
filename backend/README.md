@@ -77,7 +77,6 @@ TD 자원예약 신청은 `insight_admin`의 `resource_reservation_requests` 테
 - `ADMIN_DATABASE_URL=mysql+pymysql://insight_admin_user:password@127.0.0.1:3306/insight_admin?charset=utf8mb4`
 - `USER_DATABASE_URL=mysql+pymysql://desk_user_user:password@127.0.0.1:3306/desk_users?charset=utf8mb4`
 - `TD_API_KEY=change-me-td-api-key`
-- `SLURM_RESERVATION_MOCK=true`
 - `SLURM_REST_BASE_URL=http://slurmrestd:6820`
 - `SLURM_REST_API_VERSION=v0.0.44`
 - `SLURM_REST_USER_NAME=<slurm-user>`
@@ -129,7 +128,7 @@ curl "http://127.0.0.1:8000/api/admin/resource/reservation-requests" \
 ```
 
 승인과 재시도는 승인 시점에 Slurm payload를 생성/저장한 뒤 Slurm REST API를 호출합니다.
-`SLURM_RESERVATION_MOCK=true`이면 실제 Slurm 호출 없이 mock 성공 응답으로 `SLURM_RESERVED` 처리됩니다.
+Slurm 예약은 실제 REST API로만 처리합니다. 연결 계정/토큰이 없으면 연동 미설정 오류를 반환합니다.
 거절은 Slurm payload를 생성하지 않고 DB row도 삭제하지 않으며 `REJECTED` 상태로 남깁니다.
 
 ```bash
@@ -149,13 +148,13 @@ curl -X POST "http://127.0.0.1:8000/api/admin/resource/reservation-requests/1/re
   -d '{"adminMemo":"Slurm 오류 확인 후 재시도"}'
 ```
 
-프론트 개발 중 더미 JSON을 사용하려면 `frontend/.env`에 `VITE_USE_DUMMY_RESERVATION_REQUESTS=true`를 설정합니다.
+예약 화면은 인증된 백엔드 API만 사용합니다. 한국공항공사 구성에서는 예약 메뉴와 API를 비활성화합니다.
 
 ## 프론트 연동 포인트
 
 ### 1) 로그인
 
-현재 프론트 `src/pages/Login.tsx` 에서는 더미 로그인만 하고 있으므로, 이후 아래 API로 교체하면 됩니다.
+현재 프론트 `src/pages/Login.tsx`는 아래 인증 API를 호출하여 로그인합니다.
 
 - `POST /api/v1/auth/login`
 - 요청 예시:

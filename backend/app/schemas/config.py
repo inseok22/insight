@@ -1,5 +1,5 @@
 from typing import Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
@@ -35,6 +35,14 @@ class ProductConfigResponse(BaseModel):
     features: list[str]
 
 
+class DashboardTargetResponse(BaseModel):
+    id: str
+    name: str
+    url: str
+
+
 class FrontendConfigResponse(ProductConfigResponse):
+    dashboard_layout: Literal["eicn", "single-server", "services"] = "eicn"
     dashboards: DashboardUrlsResponse
+    dashboard_targets: dict[str, list[DashboardTargetResponse]] = Field(default_factory=dict)
     terminals: list[TerminalTargetResponse]

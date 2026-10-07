@@ -31,8 +31,6 @@ type StatusFilter = ReservationStatus | 'ALL';
 type PartitionFilter = PartitionType | 'ALL';
 type SourceFilter = ReservationSource | 'ALL';
 
-const isUsingDummyReservations = import.meta.env.VITE_USE_DUMMY_RESERVATIONS === 'true';
-
 const statusLabels: Record<ReservationStatus, string> = {
   RUNNING: '진행 중',
   UPCOMING: '예정',
@@ -271,7 +269,6 @@ export default function ResourceReservationLookupTab() {
           <Typography.Text type="secondary">
             마지막 조회: {formatKstDateTime(lastFetchedAt, { seconds: true })}
           </Typography.Text>
-          {isUsingDummyReservations ? <Tag color="gold">더미 데이터 사용 중</Tag> : null}
           <Button
             loading={loading}
             onClick={() => { void loadReservations(); }}

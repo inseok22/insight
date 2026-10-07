@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query, WebSocket, status
 from fastapi.websockets import WebSocketDisconnect
 
 from app.core.config import get_settings
+from app.core.product import product_config
 from app.dependencies.features import require_feature
 from app.core.security import TokenError, decode_access_token
 from app.schemas.config import TerminalTargetResponse
@@ -31,7 +32,7 @@ async def terminal_websocket(
     target_key: str,
     token: str | None = Query(default=None),
 ) -> None:
-    if not get_settings().terminal_enabled or target_key not in settings.terminal_targets_list:
+    if "terminal" not in product_config(get_settings())["features"] or target_key not in settings.terminal_targets_list:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
