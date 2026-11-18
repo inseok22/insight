@@ -8,11 +8,16 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./
+# Includes pinned demo-chat HTTP client and Langfuse SDK for offline delivery.
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Startup creates only the initial administrator; additional users use the admin API.
 COPY app ./app
 COPY .env.example ./.env.example
-COPY data ./data
+# Keep the runtime directory without packaging local development databases.
+RUN mkdir -p ./data
 
-EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# EXPOSE documents the default; app.serve reads BACKEND_PORT at runtime.
+ENV BACKEND_PORT=18000
+EXPOSE 18000
+CMD ["python", "-m", "app.serve"]

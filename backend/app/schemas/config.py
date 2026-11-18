@@ -42,7 +42,7 @@ class DashboardTargetResponse(BaseModel):
 
 
 class FrontendConfigResponse(ProductConfigResponse):
-    dashboard_layout: Literal["eicn", "single-server", "services"] = "eicn"
+    dashboard_layout: Literal["eicn", "single-server", "single-dashboard"] = "eicn"
     dashboards: DashboardUrlsResponse
     dashboard_targets: dict[str, list[DashboardTargetResponse]] = Field(default_factory=dict)
     terminals: list[TerminalTargetResponse]

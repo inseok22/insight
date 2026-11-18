@@ -11,7 +11,7 @@ export type DashboardTarget = { id: string; name: string; url: string };
 export type DashboardGroup = { id: string; name: string; targets: DashboardTarget[] };
 export type TargetDashboardKey = 'gpu_url' | 'node_url' | 'vllm_url';
 export type FrontendConfig = ProductConfig & {
-  dashboard_layout?: 'eicn' | 'single-server' | 'services';
+  dashboard_layout?: 'eicn' | 'single-server' | 'single-dashboard';
   dashboards: Record<string, string | null>;
   dashboard_targets?: Partial<Record<TargetDashboardKey, DashboardTarget[]>>;
   terminals: { key: string; name: string; ws_path: string }[];

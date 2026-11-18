@@ -45,7 +45,7 @@ export default function TargetDashboard({ dashboardKey, title }: {
 }) {
   const config = useFrontendConfig();
   const [params, setParams] = useSearchParams();
-  const serviceLayout = config.dashboard_layout === 'services';
+  const singleLayout = config.dashboard_layout === 'single-dashboard';
   const { group, selected } = dashboardSelection(dashboardGroups(config, dashboardKey), params);
   if (!group) return <Result status="info" title="등록된 서버가 없습니다." />;
   if (!selected) return <Result status="info"
@@ -55,17 +55,17 @@ export default function TargetDashboard({ dashboardKey, title }: {
   const selectTarget = (id: string) => {
     const next = new URLSearchParams(params);
     next.set('target', id);
-    if (serviceLayout) next.delete('server');
+    if (singleLayout) next.delete('server');
     else next.set('server', group.id);
     setParams(next);
   };
   const content = (item: DashboardTarget) => item.url
     ? <DashboardFrame key={`${dashboardKey}:${item.id}:${item.url}`} target={item} />
     : <Result status="info" title="관제 화면 주소가 설정되지 않았습니다."
-        subTitle={serviceLayout ? item.name : `${title} · ${group.name}${item.name !== group.name ? ` · ${item.name}` : ''}`} />;
+        subTitle={singleLayout ? item.name : `${title} · ${group.name}${item.name !== group.name ? ` · ${item.name}` : ''}`} />;
 
   return <div className="target-dashboard">
-    {targets.length > 1 || (serviceLayout && dashboardKey === 'vllm_url') ? <Tabs
+    {targets.length > 1 ? <Tabs
       className="target-dashboard-tabs"
       activeKey={selected.id}
       onChange={selectTarget}

@@ -23,6 +23,31 @@ class OfflineTest(unittest.TestCase):
         offline.render(self.folder, self.manifest, host, f'http://{host}:8000/metrics', offline.password_hash('test-only-password'))
         return json.loads((self.folder / 'compose.json').read_text())
 
+    def test_administrator_hash_has_portable_utf8_pbkdf2_format(self):
+        # Fixed interoperability vector: the 32-character hex salt is used as UTF-8,
+        # not decoded into 16 bytes; digest uses standard padded base64.
+        with patch.object(offline.secrets, 'token_hex', return_value='0123456789abcdef0123456789abcdef'):
+            encoded = offline.password_hash('설치용-테스트-비밀번호')
+        self.assertEqual(encoded, 'pbkdf2_sha256$600000$0123456789abcdef0123456789abcdef$'
+                                  'oXtDXffxo+xekxxPM4xRNP1CWVDfO/ZtjGGI1oFmyEk=')
+
+    def test_administrator_hash_uses_a_fresh_salt(self):
+        first = offline.password_hash('test-only-password')
+        second = offline.password_hash('test-only-password')
+        self.assertRegex(first, r'^pbkdf2_sha256\$600000\$[0-9a-f]{32}\$[A-Za-z0-9+/]{43}=$')
+        self.assertNotEqual(first.split('$')[2], second.split('$')[2])
+        self.assertNotIn('test-only-password', first)
+
+    def test_database_login_hash_remains_mysql_native_password(self):
+        offline.private_json(self.folder / 'credentials.json', {
+            'root': 'root-test-only-secret', 'db': 'database-test-only-secret', 'jwt': 'jwt-test-only-secret',
+        })
+        self.render()
+        sql = (self.folder / 'init.sql').read_text()
+        self.assertIn("IDENTIFIED BY PASSWORD '*1257BE6154AC52AA71541B5AB91D82649CFE6187'", sql)
+        self.assertNotIn('pbkdf2_sha256', sql)
+        self.assertNotIn('database-test-only-secret', sql)
+
     def test_reconfigure_keeps_credentials_and_volumes_changes_all_urls(self):
         first = self.render()
         creds = (self.folder / 'credentials.json').read_bytes()
@@ -46,7 +71,13 @@ class OfflineTest(unittest.TestCase):
                 self.assertNotIn('ports', service)
         self.assertEqual(compose['services']['grafana']['environment']['GF_AUTH_ANONYMOUS_ENABLED'], 'false')
         # A real Compose parser validates JSON/YAML types, interpolation and env_file parsing.
-        subprocess.run(['docker', 'compose', '-f', str(self.folder / 'compose.json'), 'config', '--quiet'], check=True)
+        parsed = subprocess.run(['docker', 'compose', '-f', str(self.folder / 'compose.json'), 'config', '--format', 'json'],
+                                check=True, capture_output=True, text=True)
+        environment = json.loads(parsed.stdout)['services']['backend']['environment']
+        # Compose config re-escapes literal $ as $$ for reusable Compose output.
+        # After decoding that representation, no salt/digest fragment may be lost.
+        self.assertEqual(environment['INITIAL_ADMIN_PASSWORD_HASH'].replace('$$', '$'),
+                         json.loads((self.folder / 'site.json').read_text())['admin_hash'])
 
     def test_invalid_configuration_does_not_write_partial_runtime(self):
         for host, url in [('10.0.0.1;touch /tmp/a', 'http://localhost/metrics'),

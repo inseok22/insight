@@ -1,7 +1,7 @@
 import {
   DashboardOutlined, CloudServerOutlined, DeploymentUnitOutlined, DatabaseOutlined,
   InteractionOutlined, CloudOutlined, ApiOutlined, ThunderboltOutlined,
-  FundOutlined, NodeIndexOutlined, SolutionOutlined,
+  FundOutlined, NodeIndexOutlined, SolutionOutlined, MessageOutlined,
 } from '@ant-design/icons';
 import Dashboard from '../pages/sub_pages/Dashboard';
 import Node from '../pages/sub_pages/Node';
@@ -14,8 +14,10 @@ import VLLM from '../pages/sub_pages/vLLM';
 import VllmObservability from '../pages/sub_pages/VllmObservability';
 import Trace from '../pages/sub_pages/Trace';
 import UserTrace from '../pages/sub_pages/UserTrace';
+import DemoChat from '../pages/sub_pages/DemoChat';
 
 export const monitoringPages = [
+  { feature: 'demo_chat', path: 'chat', label: '시연 채팅', group: 'llm', icon: MessageOutlined, component: DemoChat },
   { feature: 'vllm', path: 'vllm', label: 'Dashboard', group: 'llm', icon: ThunderboltOutlined, component: VLLM },
   { feature: 'vllm_observability', path: 'vllm-observability', label: 'Observability', group: 'llm', icon: FundOutlined, component: VllmObservability },
   { feature: 'trace', path: 'trace', label: 'Time Trace', group: 'llm', icon: NodeIndexOutlined, component: Trace },

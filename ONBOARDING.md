@@ -59,11 +59,11 @@ cd backend
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 cp .env.example .env        # ADMIN_DATABASE_URL / USER_DATABASE_URL 등 수정
-uvicorn app.main:app --reload
+python -m app.serve  # BACKEND_PORT 사용, 기본 18000
 ```
 
 - 첫 실행 시 [init_db.py](backend/app/db/init_db.py)가 테이블을 만들고 초기 관리자(`admin` / `.env`의 `INITIAL_ADMIN_PASSWORD`)를 생성합니다.
-- 확인: Swagger `http://127.0.0.1:8000/docs`, Health `http://127.0.0.1:8000/api/v1/health`
+- 확인: Swagger `http://127.0.0.1:18000/docs`, Health `http://127.0.0.1:18000/api/v1/health`
 
 ### 프론트엔드 ([frontend/](frontend/))
 

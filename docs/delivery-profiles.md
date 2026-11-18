@@ -1,7 +1,8 @@
 # HPC / LLM 납품 설정
 
-2026-10-07 한국공항공사: `MONITORING_SCOPE=kac`는 LLM Dashboard/GPU/Server만 활성화하고,
-GPU/Server는 각각 단일 URL, LLM은 서비스별 탭과 가용 너비에 따른 더보기 메뉴로 구성합니다.
+2026-10-16 한국공항공사: `MONITORING_SCOPE=kac`는 LLM Dashboard/Observability/Time Trace/User Trace와 GPU/Server를 활성화합니다.
+LLM Dashboard/GPU/Server는 단일 Grafana URL을, 복구된 세 화면은 기존 `VLLM_OBSERVABILITY_URL`/`TRACE_URL`/`USER_TRACE_URL`을 사용합니다.
+시연 채팅은 기존 `DEMO_CHAT_ENABLED` 설정으로 별도 제어합니다. 백엔드 포트는 `deploy/.env`의 `BACKEND_PORT`로 지정합니다.
 [한국공항공사 설정 안내](kac-dashboard-urls.md)를 따릅니다. 아래 EICN 및 기존 1대용 납품 설명과 구분합니다.
 
 2026-09-30 추가: DCGM 1대/8 GPU + LLM Dashboard의 폐쇄망 납품 도구는

@@ -1,2 +1,4 @@
-deploy/
+deploy/*
+!deploy/docker-compose.yml
+!deploy/.env.backend.example
 .DS_Store

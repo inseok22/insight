@@ -26,10 +26,7 @@ def read_frontend_config(_: ActiveAdminDep) -> FrontendConfigResponse:
         for field, feature in DASHBOARD_FEATURES.items()
     }
     dashboard_targets = {
-        field: [target.model_dump() for target in parse_dashboard_targets(
-            dashboard_urls[field], name,
-            allow_empty_urls=settings.monitoring_scope == "kac" and field == "vllm_url",
-        )]
+        field: [target.model_dump() for target in parse_dashboard_targets(dashboard_urls[field], name)]
         for field, name in MULTI_TARGET_FIELDS.items()
     }
     # Keep the existing single-URL response usable by older frontends.
@@ -43,7 +40,7 @@ def read_frontend_config(_: ActiveAdminDep) -> FrontendConfigResponse:
         ) for key in settings.terminal_targets_list
     ] if "terminal" in product["features"] else []
     return FrontendConfigResponse(
-        dashboard_layout="services" if settings.monitoring_scope == "kac" else
+        dashboard_layout="single-dashboard" if settings.monitoring_scope == "kac" else
             "single-server" if settings.monitoring_scope == "gpu_llm" else "eicn",
         **product, dashboards=dashboards, dashboard_targets=dashboard_targets,
         terminals=terminals,

@@ -6,3 +6,5 @@ pydantic-settings
 PyJWT
 pwdlib[argon2]
 python-multipart
+httpx==0.28.1
+langfuse==5.2.0

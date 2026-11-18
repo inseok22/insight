@@ -3,7 +3,7 @@ import {Layout, Menu, Breadcrumb, Button, theme, Avatar, Dropdown, Space, Typogr
 import type {MenuProps} from 'antd';
 import {
     UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
-    DownOutlined, LogoutOutlined, IdcardOutlined, BellOutlined, CalendarOutlined, RobotOutlined,
+    DownOutlined, LogoutOutlined, IdcardOutlined, BellOutlined, CalendarOutlined, RobotOutlined, MessageOutlined,
 } from '@ant-design/icons';
 import { monitoringPages } from '../config/monitoring';
 import { useProduct, useFrontendConfig } from '../config/product';
@@ -11,6 +11,7 @@ import { dashboardGroups, dashboardMenuPath, dashboardSelection, hasServerMenu }
 import {Outlet, useLocation, useNavigate} from 'react-router-dom';
 import {TERMINALS} from '../config/terminals';
 import {formatKstDate, formatKstShortDate} from '../utils/time';
+import {clearAuthStorage, getStoredUsername} from '../utils/auth';
 
 const {Header, Sider, Content} = Layout;
 
@@ -49,7 +50,7 @@ export default function Admin() {
     const {pathname, search} = useLocation();
 
     const menuItems: MenuProps['items'] = useMemo(() => {
-        const enabled = monitoringPages.filter(page => features.includes(page.feature));
+        const enabled = monitoringPages.filter(page => page.feature !== 'demo_chat' && features.includes(page.feature));
         const item = (page: typeof monitoringPages[number]) => ({
             key: `/ops/${page.path}`, label: page.label, icon: <page.icon />,
             ...(hasServerMenu(frontendConfig, page.path) ? {
@@ -97,7 +98,7 @@ export default function Admin() {
         const keys = [
             ...(hasServerMenu(frontendConfig, section) ? [`/ops/${section}`] : []),
             ...(section === 'terminal' ? ['terminal'] : []),
-            ...(monitoringPages.some(page => page.path === section && page.group === 'llm') ? ['llm'] : []),
+            ...(monitoringPages.some(page => page.path === section && page.feature !== 'demo_chat' && page.group === 'llm') ? ['llm'] : []),
         ];
         if (keys.length) setOpenKeys(current => [...new Set([...current, ...keys])]);
     }, [pathname, collapsed, frontendConfig]);
@@ -178,6 +179,7 @@ export default function Admin() {
         if (parts[1] && parts[1] == "vllm-observability") items.push({title: 'LLM'}, {title: 'Observability'}); // 구 VllmObservability
         if (parts[1] && parts[1] == "trace") items.push({title: 'LLM'}, {title: 'Time Trace'}); // 구 Trace
         if (parts[1] && parts[1] == "user-trace") items.push({title: 'LLM'}, {title: 'User Trace'}); // 구 UserTrace
+        if (parts[1] === 'chat') items.push({title: 'LLM'}, {title: '시연 채팅'});
         if (parts[1] && parts[1] == "settings") items.push({title: '가입신청 관리'});
         if (parts[1] && parts[1] == "resource-reservations") items.push({title: '자원 예약 현황'});
 
@@ -193,22 +195,28 @@ export default function Admin() {
             const field = parts[1] === 'gpu' ? 'gpu_url' : parts[1] === 'server' ? 'node_url' : 'vllm_url';
             const { group, selected } = dashboardSelection(dashboardGroups(frontendConfig, field), new URLSearchParams(search));
             if (group && hasServerMenu(frontendConfig, parts[1])) items.push({ title: group.name });
-            if (selected && (parts[1] === 'vllm' || (group?.targets.length ?? 0) > 1)) items.push({ title: selected.name });
+            if (frontendConfig.dashboard_layout !== 'single-dashboard' && selected
+                && (parts[1] === 'vllm' || (group?.targets.length ?? 0) > 1)) items.push({ title: selected.name });
         }
         return items;
     }, [pathname, search, frontendConfig]);
 
-    const userName = localStorage.getItem('userName') || 'Admin';
+    const userName = getStoredUsername() || '사용자';
     const hasPendingNotifications = pendingNotifications.length > 0;
 
     const userMenuItems: MenuProps['items'] = [
         {key: 'profile', icon: <IdcardOutlined/>, label: '내 정보', disabled: true},
+        ...(features.includes('demo_chat') ? [{key: 'chat', icon: <MessageOutlined/>, label: '챗봇'}] : []),
         // EICN 납품: 가입자 승인 메뉴 비활성화.
         // {key: 'settings', icon: <SettingOutlined/>, label: '가입신청 관리'},
         ...(features.includes('resource_reservations') ? [{key: 'resource-reservations', icon: <CalendarOutlined/>, label: '자원 예약 현황'}] : []),
         {key: 'logout', icon: <LogoutOutlined/>, label: '로그아웃', danger: true},
     ];
     const onUserMenuClick: MenuProps['onClick'] = ({key}) => {
+        if (key === 'chat') {
+            navigate('/ops/chat');
+            return;
+        }
         if (key === 'settings') {
             navigate('/ops/settings');
             return;
@@ -218,7 +226,7 @@ export default function Admin() {
             return;
         }
         if (key === 'logout') {
-            localStorage.removeItem('token');
+            clearAuthStorage();
             navigate('/login', {replace: true});
         }
     };

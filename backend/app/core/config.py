@@ -3,10 +3,12 @@ import base64
 import binascii
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.admin_passwords import ADMIN_PASSWORD_ITERATIONS, parse_admin_password_hash
 from app.core.dashboard_targets import parse_dashboard_targets
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -17,10 +19,22 @@ class Settings(BaseSettings):
     app_name: str = "TSlurmOps API"
     api_v1_prefix: str = "/api/v1"
     debug: bool = False
+    backend_port: int = Field(default=18000, ge=1, le=65535)
     product_profile: Literal["hpc", "llm"] = "llm"
     monitoring_scope: Literal["profile", "gpu_llm", "kac"] = "profile"
     resource_reservations_enabled: bool = True
     terminal_enabled: bool = True
+
+    # Shared demo chat; deployment-specific connections stay in backend environment settings.
+    demo_chat_enabled: bool = False
+    vllm_api_base_url: str = ""
+    vllm_model: str = ""
+    vllm_api_key: str = Field(default="", repr=False)
+    vllm_timeout_seconds: float = Field(default=120, gt=0, le=3600)
+    langfuse_base_url: str = ""
+    langfuse_public_key: str = Field(default="", repr=False)
+    langfuse_secret_key: str = Field(default="", repr=False)
+    langfuse_tracing_enabled: bool = False
 
     secret_key: str = "change-me-in-production"
     algorithm: str = "HS256"
@@ -48,6 +62,8 @@ class Settings(BaseSettings):
     initial_admin_password: str = "admin"
     initial_admin_password_hash: str | None = None
     initial_admin_name: str = "Administrator"
+    # Legacy setting accepted for older env files; startup no longer seeds demo users.
+    seed_demo_accounts: bool = False
 
     # LSC(OpenLDAP 동기화) 원격 실행 설정 — 승인 시 SSH로 스크립트 실행
     lsc_sync_enabled: bool = Field(default=True, validation_alias="LSC_SYNC_ENABLED")
@@ -85,9 +101,20 @@ class Settings(BaseSettings):
     @classmethod
     def validate_dashboard_targets(cls, value: str | None, info: ValidationInfo) -> str | None:
         is_kac = info.data.get("monitoring_scope") == "kac"
-        if is_kac and info.field_name in {"gpu_url", "node_url"} and value and value.strip().startswith("["):
-            raise ValueError("KAC GPU_URL/NODE_URL must each be one HTTP(S) URL or empty")
-        parse_dashboard_targets(value, "Dashboard", allow_empty_urls=is_kac and info.field_name == "vllm_url")
+        if is_kac and value and value.strip().startswith("["):
+            raise ValueError("KAC GPU_URL/NODE_URL/VLLM_URL must each be one HTTP(S) URL or empty; replace the old service list")
+        parse_dashboard_targets(value, "Dashboard")
+        return value
+
+    @field_validator("vllm_api_base_url", "langfuse_base_url")
+    @classmethod
+    def validate_chat_endpoint(cls, value: str) -> str:
+        value = value.strip().rstrip("/")
+        if value:
+            parsed = urlsplit(value)
+            if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+                    or parsed.username or parsed.password or parsed.query or parsed.fragment):
+                raise ValueError("Use an HTTP(S) base URL without credentials, query or fragment")
         return value
 
     @field_validator("initial_admin_password_hash")
@@ -95,12 +122,15 @@ class Settings(BaseSettings):
     def validate_initial_hash(cls, value: str | None) -> str | None:
         if value is None:
             return None
+        parsed = parse_admin_password_hash(value)
+        if parsed is not None and parsed[0] >= ADMIN_PASSWORD_ITERATIONS:
+            return value
         try:
             if value.startswith("{SSHA}") and len(base64.b64decode(value[6:], validate=True)) >= 28:
                 return value
         except (ValueError, binascii.Error):
             pass
-        raise ValueError("Expected a salted SSHA password hash")
+        raise ValueError("Expected a PBKDF2-HMAC-SHA256 hash (600000+ iterations) or a legacy salted SSHA hash")
 
     @field_validator("debug", mode="before")
     @classmethod

@@ -32,8 +32,10 @@ def write_json(path, data):
 
 
 def password_hash(password):
-    salt = secrets.token_bytes(8)
-    return '{SSHA}' + base64.b64encode(hashlib.sha1(password.encode() + salt).digest() + salt).decode()
+    """Use the same portable administrator hash format as the API backend."""
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 600000, dklen=32)
+    return f'pbkdf2_sha256$600000${salt}${base64.b64encode(digest).decode("ascii")}'
 
 
 def read_manifest(path):

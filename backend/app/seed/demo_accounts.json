@@ -1,0 +1,12 @@
+[
+  {
+    "username": "user1",
+    "full_name": "user1",
+    "password_hash": "pbkdf2_sha256$600000$17cbf536ed83fc229868ea7d578296cf$4JLeVlpyCCE8JKXuzncx+GPxb/CyPdqt0e57dYhg5zY="
+  },
+  {
+    "username": "user2",
+    "full_name": "user2",
+    "password_hash": "pbkdf2_sha256$600000$7a709ea1395c0901162671d0fa75f5b9$J5XxZ9W8nojs2eBop+CLLrosIXA43HKcYLqugGA3+LA="
+  }
+]
