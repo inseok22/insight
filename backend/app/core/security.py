@@ -9,10 +9,15 @@ from typing import Any
 import jwt
 from fastapi import HTTPException, status
 from pwdlib import PasswordHash
+from pwdlib.exceptions import UnknownHashError
 
+from app.core.admin_passwords import (
+    ADMIN_PASSWORD_SCHEME, admin_password_needs_update, hash_admin_password,
+    verify_admin_password_hash,
+)
 from app.core.config import get_settings
 
-# 신규 비밀번호는 LDAP {SSHA}(salted SHA-1) 스킴으로 저장한다.
+# Desk/LDAP 비밀번호의 기존 {SSHA} 형식은 유지한다. 관리자는 hash_admin_password를 사용한다.
 SSHA_PREFIX = "{SSHA}"
 SSHA_SALT_BYTES = 8
 _SHA1_DIGEST_BYTES = 20
@@ -33,16 +38,22 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, hashed_password: str) -> bool:
-    if hashed_password.startswith(SSHA_PREFIX):
-        try:
-            decoded = base64.b64decode(hashed_password[len(SSHA_PREFIX):])
-        except (binascii.Error, ValueError):
-            return False
-        digest, salt = decoded[:_SHA1_DIGEST_BYTES], decoded[_SHA1_DIGEST_BYTES:]
-        expected = hashlib.sha1(password.encode("utf-8") + salt).digest()
-        return hmac.compare_digest(digest, expected)
-    # {SSHA} 도입 이전에 저장된 argon2id 해시 호환
-    return _legacy_hash.verify(password, hashed_password)
+    if not isinstance(hashed_password, str):
+        return False
+    try:
+        if hashed_password.startswith(ADMIN_PASSWORD_SCHEME + "$"):
+            return verify_admin_password_hash(password, hashed_password)
+        if hashed_password.startswith(SSHA_PREFIX):
+            decoded = base64.b64decode(hashed_password[len(SSHA_PREFIX):], validate=True)
+            if len(decoded) <= _SHA1_DIGEST_BYTES:
+                return False
+            digest, salt = decoded[:_SHA1_DIGEST_BYTES], decoded[_SHA1_DIGEST_BYTES:]
+            expected = hashlib.sha1(password.encode("utf-8") + salt).digest()
+            return hmac.compare_digest(digest, expected)
+        # 기존 Argon2id 계정도 로그인 후 관리자 전용 해시로 이전할 수 있다.
+        return _legacy_hash.verify(password, hashed_password)
+    except (binascii.Error, ValueError, UnknownHashError):
+        return False
 
 
 def create_access_token(subject: str, extra_claims: dict[str, Any] | None = None) -> str:

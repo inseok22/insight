@@ -93,35 +93,29 @@ test('offline delivery has exactly one server and eight GPU tabs, with configura
   assert.equal(dashboardGroups({ ...offline, dashboard_targets: {} }, 'gpu_url')[0].targets.length, 8);
 });
 
-test('KAC uses one GPU/Server URL and every registered LLM service without server menus', () => {
-  const llms = Array.from({ length: 12 }, (_, n) => ({
-    id: `llm-${n}`, name: `서비스 ${n}`, url: `https://example.test/llm-${n}`,
-  }));
-  const runtime = { dashboard_layout: 'services', dashboards: {
+test('KAC uses one URL per dashboard and ignores old service/server target lists', () => {
+  const runtime = { dashboard_layout: 'single-dashboard', dashboards: {
     gpu_url: 'https://example.test/d/gpu?var-server=All', node_url: 'https://example.test/d/server',
-  }, dashboard_targets: { vllm_url: llms } };
-  for (const key of ['gpu_url', 'node_url']) {
+    vllm_url: 'https://example.test/d/llm',
+  }, dashboard_targets: { vllm_url: [
+    {id: 'old', name: '기존 서비스', url: 'https://example.test/old'},
+  ] } };
+  for (const key of ['gpu_url', 'node_url', 'vllm_url']) {
     const groups = dashboardGroups(runtime, key);
     assert.equal(groups.length, 1);
     assert.equal(groups[0].targets.length, 1);
-    const selected = dashboardSelection(groups, new URLSearchParams('server=server-3&target=server-3-gpu-7')).selected;
+    const selected = dashboardSelection(groups, new URLSearchParams('server=server-3&target=old')).selected;
     assert.equal(selected.url, runtime.dashboards[key]);
   }
   for (const path of ['vllm', 'gpu', 'server']) assert.equal(hasServerMenu(runtime, path), false);
   for (const path of ['gpu', 'server']) assert.equal(hasServerMenu(config, path), true);
-  const groups = dashboardGroups(runtime, 'vllm_url');
-  assert.deepEqual(groups[0].targets, llms);
-  assert.equal(dashboardSelection(groups, new URLSearchParams('server=old&target=llm-11')).selected, llms[11]);
-  assert.equal(dashboardSelection(groups, new URLSearchParams('target=deleted')).selected, llms[0]);
-  llms[11].name = '변경한 이름';
-  assert.equal(dashboardGroups(runtime, 'vllm_url')[0].targets[11].name, '변경한 이름');
 });
 
-test('empty KAC settings do not fall back to EICN inventory or invent services', () => {
-  const empty = { dashboards: {}, dashboard_layout: 'services' };
-  assert.deepEqual(dashboardGroups(empty, 'vllm_url')[0].targets, []);
-  assert.equal(dashboardSelection(dashboardGroups(empty, 'vllm_url'), new URLSearchParams()).selected, undefined);
-  for (const key of ['gpu_url', 'node_url']) {
+test('empty KAC URLs never fall back to EICN inventory or an old service list', () => {
+  const empty = { dashboards: {}, dashboard_layout: 'single-dashboard', dashboard_targets: {
+    vllm_url: [{ id: 'old', name: '기존 서비스', url: 'https://example.test/old' }],
+  } };
+  for (const key of ['gpu_url', 'node_url', 'vllm_url']) {
     const targets = dashboardGroups(empty, key)[0].targets;
     assert.equal(targets.length, 1);
     assert.equal(targets[0].url, '');

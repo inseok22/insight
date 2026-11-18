@@ -7,6 +7,7 @@ import Terminal from './pages/sub_pages/Terminal';
 // EICN 납품: 가입자 승인 화면 비활성화.
 // import Settings from './pages/sub_pages/Settings';
 import ResourceReservationPage from './pages/sub_pages/settings/ResourceReservationPage';
+import AdminUserCreatePage from './pages/sub_pages/settings/AdminUserCreatePage';
 // EICN 납품: 공개 가입신청 비활성화.
 // import Register from './pages/Register';
 import NotFoundInDashboard from './pages/error/NotFoundInDashboard';
@@ -28,6 +29,8 @@ export default function App() {
             <Route element={<PrivateRoute />}>
                 <Route path="/ops" element={<Layout />}>
                     <Route index element={<ProductHome />} />
+                    {/* Direct URL only; account creation also requires active-admin API authentication. */}
+                    <Route path="admin-users/new" element={<AdminUserCreatePage />} />
                     {monitoringPages.map(({ path, feature, component: Page }) => (
                         <Route key={path} path={path} element={<FeatureRoute feature={feature}><Page /></FeatureRoute>} />
                     ))}

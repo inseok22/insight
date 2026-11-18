@@ -3,6 +3,7 @@ import { Button, Form, Input, Typography, message } from 'antd';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useProduct } from '../config/product';
+import { clearAuthStorage } from '../utils/auth';
 
 type LoginFields = {
   username: string;
@@ -57,6 +58,7 @@ export default function Login() {
 
       const result = data as LoginResponse;
 
+      clearAuthStorage();
       localStorage.setItem('token', result.access_token);
       localStorage.setItem('token_type', result.token_type);
       localStorage.setItem('user', JSON.stringify(result.user));

@@ -4,6 +4,7 @@ import { Button, Result, Spin } from 'antd';
 import { Navigate } from 'react-router-dom';
 import { FrontendContext, ProductContext } from '../config/product';
 import type { FrontendConfig, ProductConfig } from '../config/product';
+import { clearAuthStorage } from '../utils/auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -22,7 +23,7 @@ export default function ProductProvider({ children, authenticated = false }: {
       headers, signal: controller.signal,
     }).then(async response => {
       if (authenticated && (response.status === 401 || response.status === 403)) {
-        localStorage.removeItem('token');
+        clearAuthStorage();
         setUnauthorized(true);
         return;
       }

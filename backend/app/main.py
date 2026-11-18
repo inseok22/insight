@@ -8,14 +8,20 @@ from app.api.external.td import router as td_external_router
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.db.init_db import init_db
+from app.services.demo_chat import ChatService
 
 settings = get_settings()
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(application: FastAPI):
     init_db()
-    yield
+    application.state.demo_chat = ChatService(settings) if settings.demo_chat_enabled else None
+    try:
+        yield
+    finally:
+        if application.state.demo_chat is not None:
+            await application.state.demo_chat.aclose()
 
 
 app = FastAPI(

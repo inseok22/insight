@@ -103,7 +103,10 @@ python3 offline.py up
 Grafana의 원격 플러그인 사전 설치와 업데이트 확인도 끕니다. 기동 자체와 수집 성공은 구분하며 `check` 실패를 무시하지 않습니다.
 
 초기 실행 시 Insight와 Grafana의 admin 비밀번호를 각각 입력합니다. 비밀번호는 커맨드라인 인수/출력/파일에 평문으로 남기지 않습니다.
-Insight는 기존 SSHA 방식과 호환되는 salted hash만 설정에 저장하고 Grafana는 CLI 표준입력으로 초기 비밀번호를 설정합니다.
+Insight 관리자 초기 비밀번호는 PBKDF2-HMAC-SHA256(600,000회, 무작위 salt) 해시로 설정에 저장하고 Grafana는 CLI 표준입력으로 초기 비밀번호를 설정합니다.
+저장 형식은 `pbkdf2_sha256$600000$<32자리 hex salt>$<32바이트 digest의 표준 Base64>`이며 salt 문자열 자체를 UTF-8로 사용합니다.
+기존 관리자 SSHA/Argon2 해시는 활성 계정의 정상 로그인 때 새 형식으로 갱신합니다. 이전 해시만으로 일괄 변환할 수 없으므로 로그인 또는 비밀번호 재설정이 필요합니다.
+이전 백엔드는 새 형식을 지원하지 않으므로 코드만 롤백하면 갱신된 계정의 로그인이 실패할 수 있습니다. DB 접속용 `mysql_native_password`와 Desk/LDAP 비밀번호 형식은 이번 변경 대상이 아닙니다.
 Grafana 초기 비밀번호 변경에 성공해야 웹 프록시를 기동합니다. Grafana 익명 접근은 허용하지 않으므로 최초 iframe에서 별도 Grafana 로그인이 필요합니다.
 Insight 로그인 후 `/grafana/login`에서 Grafana에 로그인하면 같은 브라우저의 iframe에서도 세션을 사용합니다.
 

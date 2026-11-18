@@ -1,0 +1,49 @@
+services:
+  mariadb:
+    image: mariadb:11.4
+    container_name: tslurm-mariadb
+    restart: unless-stopped
+    env_file:
+      - .env.db
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./mariadb/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "13306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -p\"$${MARIADB_ROOT_PASSWORD}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10              
+
+  backend:
+    build:
+      context: ../backend
+    image: tslurm-backend:2026-10-17-admin-only-r2
+    container_name: tslurm-backend
+    restart: unless-stopped
+    # Demo chat sessions live in process memory: one container + one app.serve worker.
+    deploy:
+      replicas: 1
+    stop_grace_period: 30s
+    env_file:
+      # Runtime chat/vLLM/Langfuse settings are passed through here; do not bake into images.
+      - .env.backend
+    # deploy/.env controls both the host port and the API process port.
+    environment:
+      BACKEND_PORT: "${BACKEND_PORT:-18000}"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-18000}:${BACKEND_PORT:-18000}"
+    volumes:
+      # LSC 동기화용 SSH 키 마운트. 호스트의 키 디렉터리를 컨테이너 /secrets 로 읽기전용 마운트.
+      # 호스트에 secrets/lsc_sync_key 를 두면 컨테이너에서 /secrets/lsc_sync_key 로 보인다.
+      - ./secrets:/secrets:ro
+
+volumes:
+  mariadb_data:

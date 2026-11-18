@@ -23,10 +23,9 @@ const inventory: Record<TargetDashboardKey, DashboardGroup[]> = {
 
 export function dashboardGroups(config: FrontendConfig, key: TargetDashboardKey): DashboardGroup[] {
   const configured = config.dashboard_targets?.[key] ?? [];
-  if (config.dashboard_layout === 'services') {
-    if (key === 'vllm_url') return [{ id: 'dashboard', name: 'Dashboard', targets: configured }];
-    // Grafana owns server/GPU selection; Insight opens one complete dashboard URL.
-    const name = key === 'gpu_url' ? 'GPU' : 'Server';
+  if (config.dashboard_layout === 'single-dashboard') {
+    // Grafana owns server/GPU/LLM selection; Insight opens one complete URL per page.
+    const name = key === 'gpu_url' ? 'GPU' : key === 'node_url' ? 'Server' : 'LLM Dashboard';
     return [{ id: 'dashboard', name, targets: [{
       id: 'default', name, url: config.dashboards[key] ?? '',
     }] }];
@@ -60,5 +59,5 @@ export function dashboardMenuPath(path: string, group?: DashboardGroup) {
 }
 
 export function hasServerMenu(config: FrontendConfig, path: string) {
-  return config.dashboard_layout !== 'services' && (path === 'gpu' || path === 'server');
+  return config.dashboard_layout !== 'single-dashboard' && (path === 'gpu' || path === 'server');
 }

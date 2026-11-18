@@ -30,9 +30,11 @@ def product_config(settings: Settings) -> dict:
         features = ["gpu", "vllm"]
         is_llm = True
     elif settings.monitoring_scope == "kac":
-        # 한국공항공사: 나머지 관제/예약/터미널 기능은 직접 접근도 차단한다.
-        features = ["vllm", "gpu", "server"]
+        # LLM 관측 화면과 GPU/Server를 제공하고 나머지 기능은 직접 접근도 차단한다.
+        features = [*LLM, "gpu", "server"]
         is_llm = True
+    if settings.demo_chat_enabled:
+        features.append("demo_chat")
     return {
         "profile": "llm" if is_llm else "hpc",
         "product_name": "T-LLM Observability" if is_llm else "TSlurm Insight",

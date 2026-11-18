@@ -2,7 +2,7 @@
 import json
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 MULTI_TARGET_FIELDS = {"gpu_url": "GPU", "node_url": "Server", "vllm_url": "vLLM"}
 
@@ -14,7 +14,7 @@ class DashboardTarget(BaseModel):
     name: str
     url: str
 
-    @field_validator("id", "name")
+    @field_validator("id", "name", "url")
     @classmethod
     def not_blank(cls, value: str) -> str:
         if not value:
@@ -23,9 +23,7 @@ class DashboardTarget(BaseModel):
 
     @field_validator("url")
     @classmethod
-    def http_url(cls, value: str, info: ValidationInfo) -> str:
-        if not value and (info.context or {}).get("allow_empty_urls"):
-            return ""
+    def http_url(cls, value: str) -> str:
         parsed = urlsplit(value)
         if parsed.scheme not in {"http", "https"} or not parsed.hostname:
             raise ValueError("Dashboard URL must be an absolute HTTP(S) URL")
@@ -34,18 +32,14 @@ class DashboardTarget(BaseModel):
         return value
 
 
-def parse_dashboard_targets(
-    value: str | None, name: str, *, allow_empty_urls: bool = False,
-) -> list[DashboardTarget]:
+def parse_dashboard_targets(value: str | None, name: str) -> list[DashboardTarget]:
     if not value or not value.strip():
         return []
     value = value.strip()
     try:
         if value.startswith("["):
             entries = json.loads(value)
-            targets = [DashboardTarget.model_validate(
-                entry, context={"allow_empty_urls": allow_empty_urls},
-            ) for entry in entries]
+            targets = [DashboardTarget.model_validate(entry) for entry in entries]
         else:
             targets = [DashboardTarget(id="default", name=name, url=value)]
         if len({target.id for target in targets}) != len(targets):
@@ -55,6 +49,5 @@ def parse_dashboard_targets(
         # Do not include raw configuration/URLs in startup error messages.
         raise ValueError(
             "Expected an HTTP(S) URL or JSON array of {id, name, url}; "
-            "IDs/names must be non-empty and IDs unique, without URL credentials; "
-            "empty target URLs are supported only for KAC LLM services"
+            "fields must be non-empty and IDs unique, without URL credentials"
         ) from None
